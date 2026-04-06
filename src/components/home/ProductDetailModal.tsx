@@ -66,7 +66,7 @@ export function ProductDetailModal({ product, initialIndex = 0, onClose }: { pro
           {/* Dots */}
           {images.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
-              {images.map((_, i) => (
+              {images.map((_: string, i: number) => (
                 <div 
                   key={i} 
                   className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? 'bg-brand-mostaza w-6' : 'bg-white/50 w-1.5'}`} 
