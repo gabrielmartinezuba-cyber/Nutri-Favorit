@@ -283,34 +283,42 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
           
           <div className="flex flex-col gap-4">
             {desserts.map((d, i) => (
-              <div key={i} className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
-                <div className="flex items-start gap-2">
+              <div key={i} className="bg-gray-50/50 p-4 rounded-3xl border border-gray-100 flex flex-col gap-4">
+                <div className="flex items-center gap-3">
                   <input 
-                    placeholder="Nombre postre..."
+                    placeholder="Nombre del ítem..."
                     value={d.name}
                     onChange={e => updatePostre(i, 'name', e.target.value)}
-                    className="flex-1 bg-white border border-gray-200 !text-gray-900 rounded-xl px-3 py-2 text-sm outline-none placeholder:text-gray-400"
+                    className="flex-1 bg-white border border-gray-200 !text-gray-900 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#3C5040]/20 placeholder:text-gray-400"
                   />
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-xs">$</span>
-                    <input 
-                      type="number" 
-                      placeholder="Precio"
-                      value={d.price || ''}
-                      onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
-                      className="w-24 bg-white border border-gray-200 !text-[#E27E36] rounded-xl pl-6 pr-2 py-2 text-sm font-bold outline-none placeholder:text-[#E27E36]/50"
-                    />
-                  </div>
-                  <button onClick={() => handlePostreRemove(i)} className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors">
+                  <button 
+                    onClick={() => handlePostreRemove(i)} 
+                    className="flex-shrink-0 w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-100 transition-colors shadow-sm"
+                    title="Eliminar ítem"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="w-full">
-                  <ImageUploader 
-                    currentUrls={d.image_url ? [d.image_url] : []} 
-                    onUrlsChanged={urls => updatePostre(i, 'image_url', urls[0] || null)} 
-                    maxImages={1} 
-                  />
+
+                <div className="grid grid-cols-1 gap-3">
+                   <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-sm">$</span>
+                      <input 
+                        type="number" 
+                        placeholder="Precio"
+                        value={d.price || ''}
+                        onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
+                        className="w-full bg-white border border-gray-200 !text-[#E27E36] border-dashed rounded-xl pl-8 pr-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-[#3C5040]/20 placeholder:text-[#E27E36]/50"
+                      />
+                   </div>
+                   
+                   <div className="w-full overflow-hidden rounded-2xl border border-dashed border-gray-200 bg-white">
+                      <ImageUploader 
+                        currentUrls={d.image_url ? [d.image_url] : []} 
+                        onUrlsChanged={urls => updatePostre(i, 'image_url', urls[0] || null)} 
+                        maxImages={1} 
+                      />
+                   </div>
                 </div>
               </div>
             ))}
