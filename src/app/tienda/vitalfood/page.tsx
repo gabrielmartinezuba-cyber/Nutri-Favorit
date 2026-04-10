@@ -110,7 +110,9 @@ export default function VitalFoodPage() {
           <img src="/logovitalfood.png" alt="VitalFood Logo" className="w-full h-auto object-contain" />
         </div>
         <Link href="/tienda/favorit" className="flex items-center gap-2 bg-[#fdfafb] hover:bg-[#f6eef1] transition-colors pl-1.5 pr-4 py-1.5 rounded-full border border-gray-100 active:scale-95 shadow-sm">
-          <img src="/logofav.png" alt="Favorit Mini" className="h-8 w-auto object-contain drop-shadow-sm bg-white rounded-full p-1" />
+          <div className="h-8 w-8 flex items-center justify-center bg-[#8F3A44] rounded-full drop-shadow-sm">
+            <img src="/logofav.png" alt="Favorit Mini" className="h-4 w-auto object-contain brightness-0 invert" />
+          </div>
           <span className="text-[11px] font-bold text-brand-borravino uppercase tracking-wider">Ir a Favorit</span>
         </Link>
       </div>
