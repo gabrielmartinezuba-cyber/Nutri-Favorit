@@ -86,7 +86,7 @@ export default function VitalFoodPage() {
 
     loadData();
     return () => { mounted = false; };
-  }, [supabase]);
+  }, []);
 
   const getItemQty = (id: string) => {
     return items.find(i => i.id === id)?.quantity || 0;
@@ -278,7 +278,6 @@ export default function VitalFoodPage() {
              <div className="flex items-center justify-center p-8"><p className="animate-pulse text-gray-500 font-bold">Cargando promociones...</p></div>
            ) : promosState.length > 0 ? (
              promosState.map((promo) => {
-              const qty = getItemQty(`vf-promo-${promo.id}`);
               const wppMessage = encodeURIComponent(`¡Hola! Quisiera más información sobre la ${promo.nombre || promo.name} por $${promo.precio || promo.price}.`);
               return (
                 <div key={promo.id} className="bg-gradient-to-tr from-[#3C5040] to-[#516b56] text-white p-6 rounded-3xl shadow-lg flex flex-col gap-4">
@@ -288,30 +287,14 @@ export default function VitalFoodPage() {
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-3xl font-black">${promo.precio || promo.price}</span>
-                    {qty === 0 ? (
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleAddToCart({ ...promo, id: `vf-promo-${promo.id}` })}
-                          className="bg-white text-[#3C5040] px-4 py-2 rounded-xl font-bold active:scale-95 transition-transform text-sm"
-                        >
-                          Agregar
-                        </button>
-                        <a 
-                          href={`https://wa.me/${FAVORIT_WHATSAPP}?text=${wppMessage}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="border border-white/30 text-white px-4 py-2 rounded-xl font-bold text-sm"
-                        >
-                          Consultar
-                        </a>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2 border border-white/20">
-                        <button onClick={() => handleUpdateQty(`vf-promo-${promo.id}`, qty - 1)} className="text-white"><Minus size={18} strokeWidth={3} /></button>
-                        <span className="font-black text-base">{qty}</span>
-                        <button onClick={() => handleUpdateQty(`vf-promo-${promo.id}`, qty + 1)} className="text-white"><Plus size={18} strokeWidth={3} /></button>
-                      </div>
-                    )}
+                    <a 
+                      href={`https://wa.me/${FAVORIT_WHATSAPP}?text=${wppMessage}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-white text-[#3C5040] px-6 py-2.5 rounded-xl font-black active:scale-95 transition-transform text-sm shadow-sm text-center"
+                    >
+                      CONSULTAR
+                    </a>
                   </div>
                 </div>
               );
