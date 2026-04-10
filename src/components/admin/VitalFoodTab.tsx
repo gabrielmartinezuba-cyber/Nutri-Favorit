@@ -208,7 +208,7 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
             type="date" 
             value={date} 
             onChange={e => setDate(e.target.value)}
-            className="ml-auto bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3C5040]/20 transition-all"
+            className="ml-auto bg-gray-50 border border-gray-200 !text-gray-900 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#3C5040]/20 transition-all"
           />
         </div>
 
@@ -230,7 +230,7 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                   value={options[opt].desc}
                   onChange={e => setOptions({...options, [opt]: {...options[opt], desc: e.target.value}})}
                   rows={2}
-                  className="bg-[#f0f4f0] border border-[#c8d8c8] text-gray-900 rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-gray-400"
+                  className="bg-[#f0f4f0] border border-[#c8d8c8] !text-gray-900 rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-gray-400"
                 />
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-sm">$</span>
@@ -239,7 +239,7 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                     placeholder="Precio"
                     value={options[opt].price || ''}
                     onChange={e => setOptions({...options, [opt]: {...options[opt], price: parseFloat(e.target.value) || 0}})}
-                    className="w-full bg-[#f0f4f0] border border-[#c8d8c8] text-[#E27E36] rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-[#E27E36]/50"
+                    className="w-full bg-[#f0f4f0] border border-[#c8d8c8] !text-[#E27E36] rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-[#E27E36]/50"
                   />
                 </div>
                 <div className="mt-2">
@@ -275,14 +275,14 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                   placeholder="Nombre postre..."
                   value={d.name}
                   onChange={e => updatePostre(i, 'name', e.target.value)}
-                  className="flex-1 bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl px-3 py-2 text-sm outline-none"
+                  className="flex-1 bg-[#f0f4f0] border border-[#c8d8c8] !text-gray-900 rounded-xl px-3 py-2 text-sm outline-none placeholder:text-gray-400"
                 />
                 <input 
                   type="number" 
                   placeholder="Precio"
                   value={d.price || ''}
                   onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
-                  className="w-24 bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                  className="w-24 bg-[#f0f4f0] border border-[#c8d8c8] !text-[#E27E36] rounded-xl px-3 py-2 text-sm font-bold outline-none placeholder:text-[#E27E36]/50"
                 />
                 <button onClick={() => handlePostreRemove(i)} className="text-red-300 hover:text-red-500 p-1">
                   <Trash2 className="w-4 h-4" />
@@ -541,7 +541,7 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
                       type="number" 
                       defaultValue={promo.precio}
                       id="edit-promo-price"
-                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center text-2xl font-black outline-none"
+                      className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center text-2xl font-black text-gray-900 outline-none"
                     />
                     <div className="flex gap-2 mt-2">
                       <button onClick={() => setEditingId(null)} className="flex-1 bg-gray-100 py-3 rounded-2xl font-bold text-gray-500">Cancelar</button>
@@ -567,9 +567,9 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5">
             <h3 className="text-xl font-bold text-gray-900">Nueva Promoción VitalFood</h3>
             <div className="flex flex-col gap-4">
-              <input id="add-promo-name" placeholder="Nombre de la promo (ej: Pack Mensual)" className="p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" />
-              <textarea id="add-promo-desc" placeholder="Detalle de lo que incluye..." rows={3} className="p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none resize-none" />
-              <input id="add-promo-price" type="number" placeholder="Precio final" className="p-4 bg-gray-50 border border-gray-100 rounded-2xl outline-none" />
+              <input id="add-promo-name" placeholder="Nombre de la promo (ej: Pack Mensual)" className="p-4 bg-gray-50 border border-gray-100 text-gray-900 rounded-2xl outline-none placeholder:text-gray-400" />
+              <textarea id="add-promo-desc" placeholder="Detalle de lo que incluye..." rows={3} className="p-4 bg-gray-50 border border-gray-100 text-gray-900 rounded-2xl outline-none resize-none placeholder:text-gray-400" />
+              <input id="add-promo-price" type="number" placeholder="Precio final" className="p-4 bg-gray-50 border border-gray-100 text-[#E27E36] font-bold rounded-2xl outline-none placeholder:text-[#E27E36]/50" />
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowAdd(false)} className="flex-1 bg-gray-50 py-4 rounded-2xl font-bold text-gray-400">Descartar</button>
@@ -602,8 +602,8 @@ function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => 
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
         <h3 className="font-bold text-gray-900">Editar Plato Fijo</h3>
         <div className="flex flex-col gap-3">
-           <textarea id="edit-f-desc" defaultValue={item.description || ''} className="p-3 bg-gray-50 border rounded-xl text-sm" rows={2} />
-           <input id="edit-f-price" type="number" defaultValue={item.price} className="p-3 bg-gray-50 border rounded-xl text-sm font-bold" />
+           <textarea id="edit-f-desc" defaultValue={item.description || ''} className="p-3 bg-gray-50 border border-gray-200 !text-gray-900 rounded-xl text-sm placeholder:text-gray-400" rows={2} />
+           <input id="edit-f-price" type="number" defaultValue={item.price} className="p-3 bg-gray-50 border border-gray-200 !text-[#E27E36] rounded-xl text-sm font-bold placeholder:text-[#E27E36]/50" />
            <div className="mt-2">
              <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
            </div>
@@ -634,12 +634,12 @@ function AddModal({ onClose, onSave, categories }: { onClose: () => void, onSave
       <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold text-gray-900 animate-pulse mt-2">Nuevo Ítem Fijo</h3>
         <div className="flex flex-col gap-4">
-           <select id="add-f-cat" className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm appearance-none outline-none">
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+           <select id="add-f-cat" className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm appearance-none outline-none">
+              {categories.map(c => <option key={c} value={c} className="text-gray-900">{c}</option>)}
            </select>
-           <input id="add-f-name" placeholder="Nombre del plato..." className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm outline-none" />
-           <textarea id="add-f-desc" placeholder="Descripción..." className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm outline-none" rows={2} />
-           <input id="add-f-price" type="number" placeholder="Precio" className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm font-bold outline-none" />
+           <input id="add-f-name" placeholder="Nombre del plato..." className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" />
+           <textarea id="add-f-desc" placeholder="Descripción..." className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" rows={2} />
+           <input id="add-f-price" type="number" placeholder="Precio" className="p-4 bg-gray-50 border-gray-100 border text-[#E27E36] rounded-2xl text-sm font-bold outline-none placeholder:text-[#E27E36]/50" />
            <div className="mt-2">
              <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
            </div>

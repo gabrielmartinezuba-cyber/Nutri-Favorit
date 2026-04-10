@@ -57,7 +57,7 @@ body {
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  color: white;
+  color: inherit;
   outline: none;
   transition: border-color 0.2s;
   
@@ -75,8 +75,8 @@ input:-webkit-autofill:active,
 input:-internal-autofill-selected {
   -webkit-box-shadow: 0 0 0 1000px #21191b inset !important;
   box-shadow: 0 0 0 1000px #21191b inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-  color: #ffffff !important;
-  caret-color: #ffffff !important;
+  -webkit-text-fill-color: inherit !important;
+  color: inherit !important;
+  caret-color: inherit !important;
   transition: background-color 50000s ease-in-out 0s;
 }
