@@ -27,9 +27,9 @@ export default async function ProductsPage() {
         <div className="w-[120px]">
           <img src="/logofav.png" alt="Favorit Logo" className="w-full h-auto object-contain" />
         </div>
-        <a href="/tienda/vitalfood" className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 transition-colors px-3 py-1.5 rounded-full border border-gray-100 active:scale-95">
-          <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">Ir a VitalFood</span>
-          <img src="/logovitalfood.png" alt="VitalFood Mini" className="w-6 h-6 object-cover rounded-full bg-white p-0.5" />
+        <a href="/tienda/vitalfood" className="flex items-center gap-2 bg-[#f0f7f0] hover:bg-[#e4efe4] transition-colors pl-1.5 pr-4 py-1.5 rounded-full border border-[#c8d8c8] active:scale-95 shadow-sm">
+          <img src="/logovitalfood.png" alt="VitalFood Mini" className="h-8 w-auto object-contain drop-shadow-sm bg-white rounded-full p-1" />
+          <span className="text-[11px] font-bold text-[#3c5040] uppercase tracking-wider">Ir a VitalFood</span>
         </a>
       </div>
 

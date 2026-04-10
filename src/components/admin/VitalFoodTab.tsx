@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { 
   Calendar, Plus, Trash2, Copy, Save, 
   ChevronRight, Edit2, ToggleLeft, ToggleRight, 
-  Clock, CheckCircle, Package, Tag, Loader2, AlertCircle
+  Clock, CheckCircle, Package, Tag, Loader2, AlertCircle,
+  Leaf, Flame, Zap, Utensils
 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 
@@ -98,6 +100,8 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
   const [menus, setMenus] = useState(initialMenus);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
   
   // Form State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -139,9 +143,10 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
         const filtered = prev.filter(m => m.menu_date !== date);
         return [data, ...filtered].sort((a,b) => b.menu_date.localeCompare(a.menu_date)).slice(0, 7);
       });
-      alert('Menú guardado correctamente');
+      setSuccessMsg(status === 'published' ? 'Menú publicado correctamente' : 'Menú programado correctamente');
+      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e: any) {
-      setError(e.message);
+      setError('Error guardando el menú, revisá tu conexión o intentá nuevamente.');
     } finally {
       setLoading(false);
     }
@@ -170,28 +175,37 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {(['general', 'keto', 'veggie', 'proteica'] as const).map(opt => (
-            <div key={opt} className="flex flex-col gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <label className="text-xs font-black uppercase text-gray-400 tracking-widest">{opt}</label>
-              <textarea 
-                placeholder="Descripción del plato..."
-                value={options[opt].desc}
-                onChange={e => setOptions({...options, [opt]: {...options[opt], desc: e.target.value}})}
-                rows={2}
-                className="bg-white border border-gray-200 rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
-              />
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                <input 
-                  type="number" 
-                  placeholder="Precio"
-                  value={options[opt].price || ''}
-                  onChange={e => setOptions({...options, [opt]: {...options[opt], price: parseFloat(e.target.value) || 0}})}
-                  className="w-full bg-white border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
+          {(['general', 'keto', 'veggie', 'proteica'] as const).map(opt => {
+            let Icon = Utensils;
+            if (opt === 'keto') Icon = Zap;
+            if (opt === 'veggie') Icon = Leaf;
+            if (opt === 'proteica') Icon = Flame;
+            
+            return (
+              <div key={opt} className="flex flex-col gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <label className="text-xs font-black uppercase text-[#3C5040] tracking-widest flex items-center gap-1.5 mb-1">
+                  <Icon className="w-4 h-4" /> {opt}
+                </label>
+                <textarea 
+                  placeholder="Descripción del plato..."
+                  value={options[opt].desc}
+                  onChange={e => setOptions({...options, [opt]: {...options[opt], desc: e.target.value}})}
+                  rows={2}
+                  className="bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
                 />
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">$</span>
+                  <input 
+                    type="number" 
+                    placeholder="Precio"
+                    value={options[opt].price || ''}
+                    onChange={e => setOptions({...options, [opt]: {...options[opt], price: parseFloat(e.target.value) || 0}})}
+                    className="w-full bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Desserts Section */}
@@ -215,14 +229,14 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                   placeholder="Nombre postre..."
                   value={d.name}
                   onChange={e => updatePostre(i, 'name', e.target.value)}
-                  className="flex-1 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm outline-none"
+                  className="flex-1 bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl px-3 py-2 text-sm outline-none"
                 />
                 <input 
                   type="number" 
                   placeholder="Precio"
                   value={d.price || ''}
                   onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
-                  className="w-24 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm font-bold outline-none"
+                  className="w-24 bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl px-3 py-2 text-sm font-bold outline-none"
                 />
                 <button onClick={() => handlePostreRemove(i)} className="text-red-300 hover:text-red-500 p-1">
                   <Trash2 className="w-4 h-4" />
@@ -233,7 +247,13 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions & Feedback */}
+        {successMsg && (
+          <div className="bg-green-100 border border-green-200 text-green-800 rounded-xl px-4 py-3 text-sm font-bold flex items-center justify-center gap-2 animate-pulse mt-2">
+            <CheckCircle className="w-5 h-5" /> {successMsg}
+          </div>
+        )}
+        
         <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-gray-50">
           <button 
             onClick={() => handleSave('published')}
