@@ -10,83 +10,57 @@ import { FAVORIT_WHATSAPP } from '@/config/contacto';
 // Tipos 
 type Tab = 'menu-dia' | 'menu-fijo' | 'promos';
 
-// Mock Data para VitalFood
-const MENU_DEL_DIA = [
-  {
-    id: 'vf-md-gral',
-    name: 'Menú General (Hoy)',
-    description: 'Pechuga a la plancha con puré mixto y ensalada mixta',
-    price: 6500,
-  },
-  {
-    id: 'vf-md-keto',
-    name: 'Menú Keto (Hoy)',
-    description: 'Pollo al verdeo con espinaca a la crema y parmesano',
-    price: 7200,
-  },
-  {
-    id: 'vf-md-veggie',
-    name: 'Menú Veggie (Hoy)',
-    description: 'Wok de vegetales de estación con tofu y semillas',
-    price: 6300,
-  },
-  {
-    id: 'vf-md-prot',
-    name: 'Menú Proteico (Hoy)',
-    description: 'Bife de chorizo magro con revuelto de claras y zapallo',
-    price: 8000,
-  }
-];
-
-const POSTRES_DEL_DIA = [
-  {
-    id: 'vf-pd-1',
-    name: 'Flan Light',
-    description: 'Flan casero sin azúcar con dulce de leche diet',
-    price: 2500,
-  },
-  {
-    id: 'vf-pd-2',
-    name: 'Copa de Frutas',
-    description: 'Ensalada de frutas frescas',
-    price: 2000,
-  }
-];
-
-const MENU_FIJO = [
-  {
-    category: 'Pastas',
-    items: [
-      { id: 'vf-mf-p1', name: 'Sorrentinos de Jamón y Queso', description: 'Con salsa fileto', price: 6800 },
-      { id: 'vf-mf-p2', name: 'Ravioles de Verdura', description: 'Con salsa blanca', price: 6500 },
-    ]
-  },
-  {
-    category: 'Ensaladas',
-    items: [
-      { id: 'vf-mf-e1', name: 'Ensalada Caesar', description: 'Lechuga, pollo, croutons, queso', price: 5500 },
-      { id: 'vf-mf-e2', name: 'Ensalada Atún', description: 'Atún, huevo, tomate, zanahoria', price: 5800 },
-    ]
-  }
-];
-
-const PROMOS = [
-  {
-    id: 'sem',
-    name: 'Promo Semanal',
-    description: 'Llevá 5 viandas de Menú General con postre incluido',
-    price: 29000
-  },
-  {
-    id: 'men',
-    name: 'Promo Mensual',
-    description: '20 viandas combinables (Menú General y Veggie)',
-    price: 110000
-  }
-];
+import { useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function VitalFoodPage() {
+  const supabase = createClient();
   const [activeTab, setActiveTab] = useState<Tab>('menu-dia');
+  const [menuDiaState, setMenuDiaState] = useState<any[]>([]);
+  const [postresDiaState, setPostresDiaState] = useState<any[]>([]);
+  const [menuFijoState, setMenuFijoState] = useState<any[]>([]);
+  const [promosState, setPromosState] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const todayString = new Date().toISOString().split('T')[0];
+      
+      const [menusRes, fixedRes, promosRes] = await Promise.all([
+        supabase.from('vitalfood_daily_menus').select('*').eq('menu_date', todayString).eq('status', 'published').maybeSingle(),
+        supabase.from('vitalfood_fixed_items').select('*').eq('is_active', true),
+        supabase.from('vitalfood_promos').select('*').eq('activo', true)
+      ]);
+      
+      if (menusRes.data) {
+        setPostresDiaState(menusRes.data.desserts || []);
+        const opts = menusRes.data.options;
+        const mapped = [];
+        if (opts.general?.desc) mapped.push({ id: 'vf-md-gral', name: 'Menú General (Hoy)', description: opts.general.desc, price: opts.general.price, image_url: opts.general.image_url });
+        if (opts.keto?.desc) mapped.push({ id: 'vf-md-keto', name: 'Menú Keto (Hoy)', description: opts.keto.desc, price: opts.keto.price, image_url: opts.keto.image_url });
+        if (opts.veggie?.desc) mapped.push({ id: 'vf-md-veggie', name: 'Menú Veggie (Hoy)', description: opts.veggie.desc, price: opts.veggie.price, image_url: opts.veggie.image_url });
+        if (opts.proteica?.desc) mapped.push({ id: 'vf-md-prot', name: 'Menú Proteico (Hoy)', description: opts.proteica.desc, price: opts.proteica.price, image_url: opts.proteica.image_url });
+        setMenuDiaState(mapped);
+      } else {
+        setMenuDiaState([]);
+      }
+      
+      if (fixedRes.data) {
+        const groups: Record<string, any[]> = {};
+        for(const item of fixedRes.data) {
+          if(!groups[item.category]) groups[item.category] = [];
+          groups[item.category].push(item);
+        }
+        setMenuFijoState(Object.keys(groups).map(cat => ({ category: cat, items: groups[cat] })));
+      }
+      
+      if (promosRes.data) {
+        setPromosState(promosRes.data);
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, []);
   const addItem = useCartStore(state => state.addItem);
 
   const handleAddToCart = (item: any) => {
@@ -139,9 +113,11 @@ export default function VitalFoodPage() {
         <div className="flex flex-col gap-6">
           <div>
             <h2 className="text-xl font-heading font-black text-gray-900 capitalize mb-4 px-1">{today}</h2>
-            {MENU_DEL_DIA.length > 0 ? (
+            {loading ? (
+               <div className="flex items-center justify-center p-8"><p className="animate-pulse text-gray-500 font-bold">Cargando menú...</p></div>
+            ) : menuDiaState.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {MENU_DEL_DIA.map((item) => {
+                {menuDiaState.map((item) => {
                   // Determine colors based on ID or Name
                   const isKeto = item.id.includes('keto');
                   const isVeggie = item.id.includes('veggie');
@@ -157,9 +133,13 @@ export default function VitalFoodPage() {
 
                   return (
                     <div key={item.id} className={`bg-white rounded-2xl shadow-sm border-l-4 ${borderColor} border-y border-r border-gray-100 flex flex-col overflow-hidden`}>
-                      {/* Image Placeholder */}
-                      <div className={`h-24 w-full ${lightBg} flex items-center justify-center`}>
-                        <img src="/logovitalfood.png" className="h-10 opacity-20 grayscale" alt="" />
+                      {/* Image Formating */}
+                      <div className={`h-32 w-full ${item.image_url ? 'bg-transparent' : lightBg} flex items-center justify-center overflow-hidden border-b border-gray-50`}>
+                        {item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <img src="/logovitalfood.png" className="h-10 opacity-20 grayscale" alt="" />
+                        )}
                       </div>
                       
                       <div className="p-4 flex flex-col gap-2 flex-grow">
@@ -188,41 +168,50 @@ export default function VitalFoodPage() {
             )}
           </div>
 
-          <div>
-            <h3 className="text-lg font-heading font-black text-gray-900 mb-3">Postres</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {POSTRES_DEL_DIA.map((item) => (
-                <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2">
-                  <div>
-                    <h4 className="font-bold text-sm text-gray-900">{item.name}</h4>
-                    <span className="text-sm font-black text-[#3C5040]">${item.price}</span>
+          {postresDiaState.length > 0 && (
+            <div>
+              <h3 className="text-lg font-heading font-black text-gray-900 mb-3">Postres</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {postresDiaState.map((item, idx) => (
+                  <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2">
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900">{item.name}</h4>
+                      <span className="text-sm font-black text-[#3C5040]">${item.price}</span>
+                    </div>
+                    <button 
+                      onClick={() => handleAddToCart({ ...item, id: `vf-pd-${idx}` })}
+                      className="w-full mt-auto bg-gray-100 text-gray-800 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
+                    >
+                      AGREGAR
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => handleAddToCart(item)}
-                    className="w-full mt-auto bg-gray-100 text-gray-800 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
-                  >
-                    AGREGAR
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* Contenido Menú Fijo */}
       {activeTab === 'menu-fijo' && (
         <div className="flex flex-col gap-6">
-          {MENU_FIJO.map((cat) => (
+          {loading ? (
+               <div className="flex items-center justify-center p-8"><p className="animate-pulse text-gray-500 font-bold">Cargando menú fijo...</p></div>
+          ) : menuFijoState.map((cat) => (
             <div key={cat.category}>
-              <h2 className="text-xl font-heading font-black text-gray-900 mb-4">{cat.category}</h2>
+              <h2 className="text-xl font-heading font-black text-[#E27E36] mb-4 uppercase tracking-widest">{cat.category}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cat.items.map((item) => (
-                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div className="flex-1 pr-4">
+                {cat.items.map((item: any) => (
+                  <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-4">
+                     {item.image_url && (
+                        <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-50">
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                     )}
+                    <div className="flex-1 pr-2">
                       <h3 className="font-bold text-gray-900">{item.name}</h3>
                       <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                      <span className="block text-md font-black text-[#3C5040] mt-2">${item.price}</span>
+                      <span className="block text-md font-black text-[#E27E36] mt-2">${item.price}</span>
                     </div>
                     <button 
                       onClick={() => handleAddToCart(item)}
@@ -241,16 +230,18 @@ export default function VitalFoodPage() {
       {/* Contenido Promos */}
       {activeTab === 'promos' && (
         <div className="flex flex-col gap-4">
-          {PROMOS.map((promo) => {
-            const wppMessage = encodeURIComponent(`¡Hola! Quisiera más información sobre la ${promo.name} por $${promo.price}.`);
+           {loading ? (
+             <div className="flex items-center justify-center p-8"><p className="animate-pulse text-gray-500 font-bold">Cargando promociones...</p></div>
+           ) : promosState.map((promo) => {
+            const wppMessage = encodeURIComponent(`¡Hola! Quisiera más información sobre la ${promo.nombre || promo.name} por $${promo.precio || promo.price}.`);
             return (
               <div key={promo.id} className="bg-gradient-to-tr from-[#3C5040] to-[#516b56] text-white p-6 rounded-3xl shadow-lg flex flex-col gap-4">
                 <div>
-                  <h3 className="text-2xl font-black">{promo.name}</h3>
-                  <p className="text-white/80 mt-1 font-medium text-sm leading-relaxed">{promo.description}</p>
+                  <h3 className="text-2xl font-black">{promo.nombre || promo.name}</h3>
+                  <p className="text-white/80 mt-1 font-medium text-sm leading-relaxed">{promo.descripcion || promo.description}</p>
                 </div>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-3xl font-black">${promo.price}</span>
+                  <span className="text-3xl font-black">${promo.precio || promo.price}</span>
                   <a 
                     href={`https://wa.me/${FAVORIT_WHATSAPP}?text=${wppMessage}`}
                     target="_blank"

@@ -16,10 +16,10 @@ export type DailyMenu = {
   id: string;
   menu_date: string;
   options: {
-    general: { desc: string; price: number };
-    keto: { desc: string; price: number };
-    veggie: { desc: string; price: number };
-    proteica: { desc: string; price: number };
+    general: { desc: string; price: number; image_url?: string | null };
+    keto: { desc: string; price: number; image_url?: string | null };
+    veggie: { desc: string; price: number; image_url?: string | null };
+    proteica: { desc: string; price: number; image_url?: string | null };
   };
   desserts: { name: string; price: number }[];
   status: 'published' | 'scheduled';
@@ -109,10 +109,10 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
   // Form State
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [options, setOptions] = useState({
-    general: { desc: '', price: 0 },
-    keto: { desc: '', price: 0 },
-    veggie: { desc: '', price: 0 },
-    proteica: { desc: '', price: 0 }
+    general: { desc: '', price: 0, image_url: null as string | null },
+    keto: { desc: '', price: 0, image_url: null as string | null },
+    veggie: { desc: '', price: 0, image_url: null as string | null },
+    proteica: { desc: '', price: 0, image_url: null as string | null }
   });
   const [desserts, setDesserts] = useState<{name: string, price: number}[]>([]);
 
@@ -135,9 +135,25 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
         .eq('menu_date', date)
         .maybeSingle();
         
+      const processedOptions: any = { ...options };
+      for (const key of Object.keys(processedOptions)) {
+        let finalImageUrl = processedOptions[key].image_url;
+        if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+          const blob = await fetch(finalImageUrl).then(r => r.blob());
+          const fileExt = blob.type.split('/')[1] || 'webp';
+          const fileName = `vfd_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            finalImageUrl = publicUrl;
+          }
+        }
+        processedOptions[key].image_url = finalImageUrl;
+      }
+
       const payload: any = {
         menu_date: date,
-        options,
+        options: processedOptions,
         desserts,
         status
       };
@@ -169,7 +185,14 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
   };
 
   const handleDuplicate = (menu: DailyMenu) => {
-    setOptions(menu.options);
+    // Backwards compatibility for older menus missing image_url
+    const duplicatedOptions = {
+        general: { desc: menu.options?.general?.desc || '', price: menu.options?.general?.price || 0, image_url: menu.options?.general?.image_url || null },
+        keto: { desc: menu.options?.keto?.desc || '', price: menu.options?.keto?.price || 0, image_url: menu.options?.keto?.image_url || null },
+        veggie: { desc: menu.options?.veggie?.desc || '', price: menu.options?.veggie?.price || 0, image_url: menu.options?.veggie?.image_url || null },
+        proteica: { desc: menu.options?.proteica?.desc || '', price: menu.options?.proteica?.price || 0, image_url: menu.options?.proteica?.image_url || null },
+    };
+    setOptions(duplicatedOptions);
     setDesserts(menu.desserts);
     setDate(new Date().toISOString().split('T')[0]);
   };
@@ -207,16 +230,23 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                   value={options[opt].desc}
                   onChange={e => setOptions({...options, [opt]: {...options[opt], desc: e.target.value}})}
                   rows={2}
-                  className="bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
+                  className="bg-[#f0f4f0] border border-[#c8d8c8] text-gray-900 rounded-xl p-3 text-sm resize-none focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-gray-400"
                 />
                 <div className="relative mt-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-sm">$</span>
                   <input 
                     type="number" 
                     placeholder="Precio"
                     value={options[opt].price || ''}
                     onChange={e => setOptions({...options, [opt]: {...options[opt], price: parseFloat(e.target.value) || 0}})}
-                    className="w-full bg-[#f0f4f0] border border-[#c8d8c8] rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none"
+                    className="w-full bg-[#f0f4f0] border border-[#c8d8c8] text-[#E27E36] rounded-xl pl-7 pr-3 py-2.5 text-sm font-bold focus:ring-2 focus:ring-[#3C5040]/20 outline-none placeholder:text-[#E27E36]/50"
+                  />
+                </div>
+                <div className="mt-2">
+                  <ImageUploader 
+                    currentUrls={options[opt].image_url ? [options[opt].image_url as string] : []} 
+                    onUrlsChanged={urls => setOptions({...options, [opt]: {...options[opt], image_url: urls[0] || null}})} 
+                    maxImages={1} 
                   />
                 </div>
               </div>
