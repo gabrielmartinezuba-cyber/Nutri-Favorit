@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductsTab, { type Product as CatalogProduct } from './ProductsTab';
+import VitalFoodTab, { type DailyMenu, type FixedItem, type Promo } from './VitalFoodTab';
 
 // ── Types ──────────────────────────────────────────────────────
 type Profile = {
@@ -39,6 +40,12 @@ type Stats = {
   ordenesPendientes: number;
   totalOrdenes: number;
   totalProductos: number;
+};
+
+type VitalFoodData = {
+  dailyMenus: DailyMenu[];
+  fixedItems: FixedItem[];
+  promos: Promo[];
 };
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -77,15 +84,16 @@ function StatCard({ icon, label, value, accent }: {
 
 // ── Main Dashboard ─────────────────────────────────────────────
 export default function AdminDashboardClient({
-  adminName, profiles, orders, products, stats,
+  adminName, profiles, orders, products, stats, vitalFoodData,
 }: {
   adminName: string;
   profiles: Profile[];
   orders: Order[];
   products: CatalogProduct[];
   stats: Stats;
+  vitalFoodData: VitalFoodData;
 }) {
-  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos'>('metricas');
+  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos' | 'vitalfood'>('metricas');
   const [search, setSearch] = useState('');
   const router = useRouter();
   const supabase = createClient();
@@ -266,6 +274,19 @@ export default function AdminDashboardClient({
               <ProductsTab initialProducts={products} />
             </motion.div>
           )}
+
+          {/* ── Vista: VitalFood ── */}
+          {activeTab === 'vitalfood' && (
+            <motion.div
+              key="vitalfood"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <VitalFoodTab data={vitalFoodData} />
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
@@ -296,6 +317,12 @@ export default function AdminDashboardClient({
             label="Catálogo"
             active={activeTab === 'productos'}
             onClick={() => { setSearch(''); setActiveTab('productos'); }}
+          />
+          <BottomTab
+            icon={<img src="/logovitalfood.png" className={`w-6 h-6 object-contain ${activeTab === 'vitalfood' ? '' : 'grayscale opacity-50'}`} />}
+            label="VitalFood"
+            active={activeTab === 'vitalfood'}
+            onClick={() => { setSearch(''); setActiveTab('vitalfood'); }}
           />
         </div>
       </div>

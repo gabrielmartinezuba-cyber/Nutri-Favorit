@@ -22,25 +22,29 @@ export default async function AdminPage() {
   // ── Fetch con service role (bypasa RLS → lee todos los registros) ──
   const adminClient = createAdminClient();
 
-  const [profilesRes, ordersRes, productsRes] = await Promise.all([
+  const [profilesRes, ordersRes, productsRes, vfMenusRes, vfFixedRes, vfPromosRes] = await Promise.all([
     adminClient.from('profiles').select('*').order('favorit_points', { ascending: false }),
     adminClient.from('orders').select('*').order('created_at', { ascending: false }).limit(50),
     adminClient.from('products').select('*').order('created_at', { ascending: false }),
+    adminClient.from('vitalfood_daily_menus').select('*').order('menu_date', { ascending: false }).limit(7),
+    adminClient.from('vitalfood_fixed_items').select('*').order('created_at', { ascending: false }),
+    adminClient.from('vitalfood_promos').select('*').order('created_at', { ascending: false }),
   ]);
 
-  // Logging errors to debug silent failures
-  if (profilesRes.error) console.error('Error fetching profiles:', profilesRes.error);
-  if (ordersRes.error)   console.error('Error fetching orders:', ordersRes.error);
-  if (productsRes.error) console.error('Error fetching products:', productsRes.error);
+  // Logging errors
+  if (profilesRes.error) console.error('Error profiles:', profilesRes.error);
+  if (ordersRes.error)   console.error('Error orders:', ordersRes.error);
+  if (productsRes.error) console.error('Error products:', productsRes.error);
+  if (vfMenusRes.error)  console.error('Error VF Menus:', vfMenusRes.error);
+  if (vfFixedRes.error)  console.error('Error VF Fixed:', vfFixedRes.error);
+  if (vfPromosRes.error) console.error('Error VF Promos:', vfPromosRes.error);
 
   const profiles = profilesRes.data ?? [];
   const orders   = ordersRes.data   ?? [];
   const products = productsRes.data ?? [];
-
-  // Stats
-  const totalClientes       = profiles.filter(p => p.role === 'cliente').length;
-  const totalPuntos         = profiles.reduce((acc, p) => acc + (p.favorit_points ?? 0), 0);
-  const ordenesPendientes   = orders.filter(o => o.status === 'pending').length;
+  const vfMenus  = vfMenusRes.data  ?? [];
+  const vfFixed  = vfFixedRes.data  ?? [];
+  const vfPromos = vfPromosRes.data ?? [];
 
   return (
     <AdminDashboardClient
@@ -48,10 +52,15 @@ export default async function AdminPage() {
       profiles={profiles}
       orders={orders}
       products={products}
+      vitalFoodData={{
+        dailyMenus: vfMenus,
+        fixedItems: vfFixed,
+        promos: vfPromos,
+      }}
       stats={{
-        totalClientes,
-        totalPuntos,
-        ordenesPendientes,
+        totalClientes: profiles.filter(p => p.role === 'cliente').length,
+        totalPuntos: profiles.reduce((acc, p) => acc + (p.favorit_points ?? 0), 0),
+        ordenesPendientes: orders.filter(o => o.status === 'pending').length,
         totalOrdenes: orders.length,
         totalProductos: products.length,
       }}
