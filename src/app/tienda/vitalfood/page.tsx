@@ -24,40 +24,50 @@ export default function VitalFoodPage() {
 
   useEffect(() => {
     async function loadData() {
-      const todayString = new Date().toISOString().split('T')[0];
-      
-      const [menusRes, fixedRes, promosRes] = await Promise.all([
-        supabase.from('vitalfood_daily_menus').select('*').eq('menu_date', todayString).eq('status', 'published').maybeSingle(),
-        supabase.from('vitalfood_fixed_items').select('*').eq('is_active', true),
-        supabase.from('vitalfood_promos').select('*').eq('activo', true)
-      ]);
-      
-      if (menusRes.data) {
-        setPostresDiaState(menusRes.data.desserts || []);
-        const opts = menusRes.data.options;
-        const mapped = [];
-        if (opts.general?.desc) mapped.push({ id: 'vf-md-gral', name: 'Menú General (Hoy)', description: opts.general.desc, price: opts.general.price, image_url: opts.general.image_url });
-        if (opts.keto?.desc) mapped.push({ id: 'vf-md-keto', name: 'Menú Keto (Hoy)', description: opts.keto.desc, price: opts.keto.price, image_url: opts.keto.image_url });
-        if (opts.veggie?.desc) mapped.push({ id: 'vf-md-veggie', name: 'Menú Veggie (Hoy)', description: opts.veggie.desc, price: opts.veggie.price, image_url: opts.veggie.image_url });
-        if (opts.proteica?.desc) mapped.push({ id: 'vf-md-prot', name: 'Menú Proteico (Hoy)', description: opts.proteica.desc, price: opts.proteica.price, image_url: opts.proteica.image_url });
-        setMenuDiaState(mapped);
-      } else {
-        setMenuDiaState([]);
-      }
-      
-      if (fixedRes.data) {
-        const groups: Record<string, any[]> = {};
-        for(const item of fixedRes.data) {
-          if(!groups[item.category]) groups[item.category] = [];
-          groups[item.category].push(item);
+      try {
+        const todayString = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+        
+        const [menusRes, fixedRes, promosRes] = await Promise.all([
+          supabase.from('vitalfood_daily_menus').select('*').eq('menu_date', todayString).eq('status', 'published').maybeSingle(),
+          supabase.from('vitalfood_fixed_items').select('*').eq('is_active', true),
+          supabase.from('vitalfood_promos').select('*').eq('activo', true)
+        ]);
+
+        if (menusRes.error) console.error('Error fetching today menu:', menusRes.error);
+        if (fixedRes.error) console.error('Error fetching fixed items:', fixedRes.error);
+        if (promosRes.error) console.error('Error fetching promos:', promosRes.error);
+        
+        if (menusRes.data) {
+          setPostresDiaState(menusRes.data.desserts || []);
+          const opts = menusRes.data.options || {};
+          const mapped = [];
+          if (opts.general?.desc) mapped.push({ id: 'vf-md-gral', name: 'Menú General (Hoy)', description: opts.general.desc, price: opts.general.price, image_url: opts.general.image_url });
+          if (opts.keto?.desc) mapped.push({ id: 'vf-md-keto', name: 'Menú Keto (Hoy)', description: opts.keto.desc, price: opts.keto.price, image_url: opts.keto.image_url });
+          if (opts.veggie?.desc) mapped.push({ id: 'vf-md-veggie', name: 'Menú Veggie (Hoy)', description: opts.veggie.desc, price: opts.veggie.price, image_url: opts.veggie.image_url });
+          if (opts.proteica?.desc) mapped.push({ id: 'vf-md-prot', name: 'Menú Proteico (Hoy)', description: opts.proteica.desc, price: opts.proteica.price, image_url: opts.proteica.image_url });
+          setMenuDiaState(mapped);
+        } else {
+          setMenuDiaState([]);
         }
-        setMenuFijoState(Object.keys(groups).map(cat => ({ category: cat, items: groups[cat] })));
+        
+        if (fixedRes.data) {
+          const groups: Record<string, any[]> = {};
+          for(const item of fixedRes.data) {
+            const cat = item.category || 'Otros';
+            if(!groups[cat]) groups[cat] = [];
+            groups[cat].push(item);
+          }
+          setMenuFijoState(Object.keys(groups).map(cat => ({ category: cat, items: groups[cat] })));
+        }
+        
+        if (promosRes.data) {
+          setPromosState(promosRes.data);
+        }
+      } catch (e) {
+        console.error('CRITICAL: Fatal error loading VitalFood data:', e);
+      } finally {
+        setLoading(false);
       }
-      
-      if (promosRes.data) {
-        setPromosState(promosRes.data);
-      }
-      setLoading(false);
     }
     loadData();
   }, []);
