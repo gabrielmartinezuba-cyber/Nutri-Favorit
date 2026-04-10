@@ -170,20 +170,29 @@ export default function VitalFoodPage() {
 
           {postresDiaState.length > 0 && (
             <div>
-              <h3 className="text-lg font-heading font-black text-gray-900 mb-3">Postres</h3>
+              <h3 className="text-lg font-heading font-black text-gray-900 mb-3 px-1">Postres y Otros</h3>
               <div className="grid grid-cols-2 gap-3">
                 {postresDiaState.map((item, idx) => (
-                  <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-2">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900">{item.name}</h4>
-                      <span className="text-sm font-black text-[#3C5040]">${item.price}</span>
+                  <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+                    <div className="h-24 w-full bg-gray-50 flex items-center justify-center overflow-hidden border-b border-gray-50">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src="/logovitalfood.png" className="h-8 opacity-20 grayscale" alt="" />
+                      )}
                     </div>
-                    <button 
-                      onClick={() => handleAddToCart({ ...item, id: `vf-pd-${idx}` })}
-                      className="w-full mt-auto bg-gray-100 text-gray-800 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
-                    >
-                      AGREGAR
-                    </button>
+                    <div className="p-3 flex flex-col gap-1.5">
+                      <h4 className="font-bold text-[13px] text-gray-900 leading-tight line-clamp-1">{item.name}</h4>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-sm font-black text-[#3C5040]">${item.price}</span>
+                        <button 
+                          onClick={() => handleAddToCart({ ...item, id: `vf-pd-${idx}` })}
+                          className="bg-gray-100 text-[#3C5040] p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

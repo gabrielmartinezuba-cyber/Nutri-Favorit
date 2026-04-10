@@ -101,7 +101,7 @@ export default function VitalFoodTab({ data }: Props) {
 function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
   const supabase = createClient();
   const [menus, setMenus] = useState(initialMenus);
-  const [loading, setLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState<'published' | 'scheduled' | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -125,36 +125,45 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
   };
 
   const handleSave = async (status: 'published' | 'scheduled') => {
-    setLoading(true);
+    setLoadingType(status);
     setError('');
     try {
-      // Check if menu for this date already exists to update it instead of insert duplicate
-      const { data: existing } = await supabase
-        .from('vitalfood_daily_menus')
-        .select('id')
-        .eq('menu_date', date)
-        .maybeSingle();
-        
-      const processedOptions: any = { ...options };
-      for (const key of Object.keys(processedOptions)) {
+      const existing = menus.find(m => m.menu_date === date);
+      
+      const processedOptions = { ...options };
+      for (const key of (['general', 'keto', 'veggie', 'proteica'] as const)) {
         let finalImageUrl = processedOptions[key].image_url;
         if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
           const blob = await fetch(finalImageUrl).then(r => r.blob());
           const fileExt = blob.type.split('/')[1] || 'webp';
-          const fileName = `vfd_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-          const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
-          if (!uploadError) {
-            const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
-            finalImageUrl = publicUrl;
-          }
+          const fileName = `vf_${Date.now()}_${key}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage.from('products').upload(fileName, blob);
+          if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
+          finalImageUrl = publicUrl;
         }
         processedOptions[key].image_url = finalImageUrl;
       }
 
+      // Process dessert images
+      const processedDesserts = await Promise.all(desserts.map(async (d, i) => {
+        let finalImageUrl = d.image_url;
+        if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+          const blob = await fetch(finalImageUrl).then(r => r.blob());
+          const fileExt = blob.type.split('/')[1] || 'webp';
+          const fileName = `dessert_${Date.now()}_${i}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage.from('products').upload(fileName, blob);
+          if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
+          finalImageUrl = publicUrl;
+        }
+        return { ...d, image_url: finalImageUrl };
+      }));
+
       const payload: any = {
         menu_date: date,
         options: processedOptions,
-        desserts,
+        desserts: processedDesserts,
         status
       };
       
@@ -181,12 +190,11 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
       console.error('Error in handleSave MenuDia:', e);
       setError('Error guardando el menú: ' + (e.message || 'revisá tu conexión o intentá nuevamente.'));
     } finally {
-      setLoading(false);
+      setLoadingType(null);
     }
   };
 
   const handleDuplicate = (menu: DailyMenu) => {
-    // Backwards compatibility for older menus missing image_url
     const duplicatedOptions = {
         general: { desc: menu.options?.general?.desc || '', price: menu.options?.general?.price || 0, image_url: menu.options?.general?.image_url || null },
         keto: { desc: menu.options?.keto?.desc || '', price: menu.options?.keto?.price || 0, image_url: menu.options?.keto?.image_url || null },
@@ -269,28 +277,40 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
             </button>
           </div>
           
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             {desserts.map((d, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input 
-                  placeholder="Nombre postre..."
-                  value={d.name}
-                  onChange={e => updatePostre(i, 'name', e.target.value)}
-                  className="flex-1 bg-[#f0f4f0] border border-[#c8d8c8] !text-gray-900 rounded-xl px-3 py-2 text-sm outline-none placeholder:text-gray-400"
-                />
-                <input 
-                  type="number" 
-                  placeholder="Precio"
-                  value={d.price || ''}
-                  onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
-                  className="w-24 bg-[#f0f4f0] border border-[#c8d8c8] !text-[#E27E36] rounded-xl px-3 py-2 text-sm font-bold outline-none placeholder:text-[#E27E36]/50"
-                />
-                <button onClick={() => handlePostreRemove(i)} className="text-red-300 hover:text-red-500 p-1">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div key={i} className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
+                <div className="flex items-start gap-2">
+                  <input 
+                    placeholder="Nombre postre..."
+                    value={d.name}
+                    onChange={e => updatePostre(i, 'name', e.target.value)}
+                    className="flex-1 bg-white border border-gray-200 !text-gray-900 rounded-xl px-3 py-2 text-sm outline-none placeholder:text-gray-400"
+                  />
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-xs">$</span>
+                    <input 
+                      type="number" 
+                      placeholder="Precio"
+                      value={d.price || ''}
+                      onChange={e => updatePostre(i, 'price', parseFloat(e.target.value) || 0)}
+                      className="w-24 bg-white border border-gray-200 !text-[#E27E36] rounded-xl pl-6 pr-2 py-2 text-sm font-bold outline-none placeholder:text-[#E27E36]/50"
+                    />
+                  </div>
+                  <button onClick={() => handlePostreRemove(i)} className="text-red-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="w-full">
+                  <ImageUploader 
+                    currentUrls={d.image_url ? [d.image_url] : []} 
+                    onUrlsChanged={urls => updatePostre(i, 'image_url', urls[0] || null)} 
+                    maxImages={1} 
+                  />
+                </div>
               </div>
             ))}
-            {desserts.length === 0 && <p className="text-[11px] text-gray-400 italic">No hay postres agregados</p>}
+            {desserts.length === 0 && <p className="text-[11px] text-gray-400 italic bg-gray-50 p-4 rounded-xl text-center border border-dashed border-gray-200">No hay postres agregados</p>}
           </div>
         </div>
 
@@ -303,20 +323,22 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
         
         <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-gray-50">
           <button 
+            type="button"
             onClick={() => handleSave('published')}
-            disabled={loading}
+            disabled={!!loadingType}
             className="flex-1 bg-[#3C5040] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-[#3C5040]/20 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-            Publicar Ahora
+            {loadingType === 'published' ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+            {loadingType === 'published' ? 'Publicando...' : 'Publicar Ahora'}
           </button>
           <button 
+            type="button"
             onClick={() => handleSave('scheduled')}
-            disabled={loading}
-            className="flex-1 bg-white border border-[#3C5040] text-[#3C5040] font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+            disabled={!!loadingType}
+            className="flex-1 bg-white border border-[#3C5040] text-[#3C5040] font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
           >
-            <Clock className="w-5 h-5" />
-            Programar
+            {loadingType === 'scheduled' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Clock className="w-5 h-5" />}
+            {loadingType === 'scheduled' ? 'Programando...' : 'Programar'}
           </button>
         </div>
         {error && <p className="text-xs text-red-500 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {error}</p>}
@@ -369,9 +391,9 @@ function FixedItemsView({ initialItems }: { initialItems: FixedItem[] }) {
         const blob = await fetch(finalImageUrl).then(r => r.blob());
         const fileExt = blob.type.split('/')[1] || 'webp';
         const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+        const { error: uploadError } = await supabase.storage.from('products').upload(fileName, blob);
         if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
         finalImageUrl = publicUrl;
       }
 
@@ -398,9 +420,9 @@ function FixedItemsView({ initialItems }: { initialItems: FixedItem[] }) {
         const blob = await fetch(finalImageUrl).then(r => r.blob());
         const fileExt = blob.type.split('/')[1] || 'webp';
         const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+        const { error: uploadError } = await supabase.storage.from('products').upload(fileName, blob);
         if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
         finalImageUrl = publicUrl;
       }
 
