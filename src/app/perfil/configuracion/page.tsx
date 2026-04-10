@@ -189,10 +189,9 @@ export default function ConfiguracionPage() {
                 {age !== null && <span className="text-[10px] font-black text-brand-verde bg-brand-verde/10 px-2 py-0.5 rounded-full">{age} años</span>}
               </div>
               <div className="relative">
-                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type="date" value={formData.birth_date}
                   onChange={e => setFormData({...formData, birth_date: e.target.value})}
-                  className="w-full bg-gray-50 border-2 border-brand-verde/10 focus:border-brand-mostaza/30 focus:bg-white rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold outline-none transition-all" required />
+                  className="w-full bg-gray-50 border-2 border-brand-verde/10 focus:border-brand-mostaza/30 focus:bg-white rounded-2xl py-3.5 px-4 text-sm font-bold outline-none transition-all" required />
               </div>
             </div>
 
