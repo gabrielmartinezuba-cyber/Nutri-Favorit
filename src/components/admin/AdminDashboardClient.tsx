@@ -93,7 +93,8 @@ export default function AdminDashboardClient({
   stats: Stats;
   vitalFoodData: VitalFoodData;
 }) {
-  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos' | 'vitalfood'>('metricas');
+  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos'>('metricas');
+  const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
   const router = useRouter();
   const supabase = createClient();
@@ -270,21 +271,34 @@ export default function AdminDashboardClient({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
+              className="flex flex-col gap-4"
             >
-              <ProductsTab initialProducts={products} />
-            </motion.div>
-          )}
+              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
+                <button
+                  onClick={() => setCatalogSubTab('favorit')}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${
+                    catalogSubTab === 'favorit' ? 'bg-[#8F3A44] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <img src="/logofav.png" className={`h-4 object-contain ${catalogSubTab !== 'favorit' && 'grayscale filter opacity-50'}`} alt="" />
+                  Favorit
+                </button>
+                <button
+                  onClick={() => setCatalogSubTab('vitalfood')}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${
+                    catalogSubTab === 'vitalfood' ? 'bg-[#3C5040] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'
+                  }`}
+                >
+                  <img src="/logovitalfood.png" className={`h-4 object-contain ${catalogSubTab !== 'vitalfood' && 'grayscale filter opacity-50'}`} alt="" />
+                  VitalFood
+                </button>
+              </div>
 
-          {/* ── Vista: VitalFood ── */}
-          {activeTab === 'vitalfood' && (
-            <motion.div
-              key="vitalfood"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-            >
-              <VitalFoodTab data={vitalFoodData} />
+              {catalogSubTab === 'favorit' ? (
+                <ProductsTab initialProducts={products} />
+              ) : (
+                <VitalFoodTab data={vitalFoodData} />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -317,12 +331,6 @@ export default function AdminDashboardClient({
             label="Catálogo"
             active={activeTab === 'productos'}
             onClick={() => { setSearch(''); setActiveTab('productos'); }}
-          />
-          <BottomTab
-            icon={<img src="/logovitalfood.png" className={`w-6 h-6 object-contain ${activeTab === 'vitalfood' ? '' : 'grayscale opacity-50'}`} />}
-            label="VitalFood"
-            active={activeTab === 'vitalfood'}
-            onClick={() => { setSearch(''); setActiveTab('vitalfood'); }}
           />
         </div>
       </div>

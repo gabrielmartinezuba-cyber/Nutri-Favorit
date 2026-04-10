@@ -10,8 +10,8 @@ import {
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { ImageUploader } from './ProductsTab';
 
-// ── Types ────────────────────────────────────────────────────────
 export type DailyMenu = {
   id: string;
   menu_date: string;
@@ -32,14 +32,17 @@ export type FixedItem = {
   description: string | null;
   price: number;
   is_active: boolean;
+  image_url: string | null;
 };
 
 export type Promo = {
   id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  is_active: boolean;
+  nombre: string;
+  descripcion: string | null;
+  precio: number;
+  activo: boolean;
+  dias?: number;
+  tipo?: string;
 };
 
 interface Props {
@@ -125,14 +128,27 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
     setLoading(true);
     setError('');
     try {
+      // Check if menu for this date already exists to update it instead of insert duplicate
+      const { data: existing } = await supabase
+        .from('vitalfood_daily_menus')
+        .select('id')
+        .eq('menu_date', date)
+        .maybeSingle();
+        
+      const payload: any = {
+        menu_date: date,
+        options,
+        desserts,
+        status
+      };
+      
+      if (existing) {
+        payload.id = existing.id;
+      }
+
       const { data, error } = await supabase
         .from('vitalfood_daily_menus')
-        .upsert({
-          menu_date: date,
-          options,
-          desserts,
-          status
-        })
+        .upsert(payload)
         .select()
         .single();
       
@@ -316,15 +332,44 @@ function FixedItemsView({ initialItems }: { initialItems: FixedItem[] }) {
   };
 
   const handleUpdate = async (id: string, updates: Partial<FixedItem>) => {
-    const { error } = await supabase.from('vitalfood_fixed_items').update(updates).eq('id', id);
+    let finalImageUrl = updates.image_url !== undefined ? updates.image_url : null;
+    if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+      const blob = await fetch(finalImageUrl).then(r => r.blob());
+      const fileExt = blob.type.split('/')[1] || 'webp';
+      const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        finalImageUrl = publicUrl;
+      }
+    }
+
+    const payload = { ...updates };
+    if (finalImageUrl !== undefined && finalImageUrl !== null) {
+        payload.image_url = finalImageUrl;
+    }
+
+    const { error } = await supabase.from('vitalfood_fixed_items').update(payload).eq('id', id);
     if (!error) {
-      setItems(items.map(i => i.id === id ? { ...i, ...updates } : i));
+      setItems(items.map(i => i.id === id ? { ...i, ...updates, image_url: finalImageUrl ?? i.image_url } : i));
       setEditingId(null);
     }
   };
 
   const handleAdd = async (payload: Omit<FixedItem, 'id' | 'is_active'>) => {
-    const { data, error } = await supabase.from('vitalfood_fixed_items').insert(payload).select().single();
+    let finalImageUrl = payload.image_url;
+    if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+      const blob = await fetch(finalImageUrl).then(r => r.blob());
+      const fileExt = blob.type.split('/')[1] || 'webp';
+      const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        finalImageUrl = publicUrl;
+      }
+    }
+
+    const { data, error } = await supabase.from('vitalfood_fixed_items').insert({ ...payload, image_url: finalImageUrl }).select().single();
     if (!error && data) {
       setItems([data, ...items]);
       setShowAdd(false);
@@ -357,6 +402,12 @@ function FixedItemsView({ initialItems }: { initialItems: FixedItem[] }) {
             </div>
             
             <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+            
+            {item.image_url && (
+              <div className="w-full h-32 rounded-xl overflow-hidden mt-2 border border-gray-100">
+                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+              </div>
+            )}
             
             <div className="flex items-center justify-between pt-4 border-t border-gray-50">
               <span className="text-xl font-black text-[#3C5040]">${item.price}</span>
@@ -397,19 +448,19 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
   const [showAdd, setShowAdd] = useState(false);
 
   const toggleStatus = async (promo: Promo) => {
-    const { error } = await supabase.from('vitalfood_promos').update({ is_active: !promo.is_active }).eq('id', promo.id);
-    if (!error) setPromos(promos.map(p => p.id === promo.id ? { ...p, is_active: !p.is_active } : p));
+    const { error } = await supabase.from('vitalfood_promos').update({ activo: !promo.activo }).eq('id', promo.id);
+    if (!error) setPromos(promos.map(p => p.id === promo.id ? { ...p, activo: !p.activo } : p));
   };
 
-  const handleUpdate = async (id: string, price: number) => {
-    const { error } = await supabase.from('vitalfood_promos').update({ price }).eq('id', id);
+  const handleUpdate = async (id: string, precio: number) => {
+    const { error } = await supabase.from('vitalfood_promos').update({ precio }).eq('id', id);
     if (!error) {
-      setPromos(promos.map(p => p.id === id ? { ...p, price } : p));
+      setPromos(promos.map(p => p.id === id ? { ...p, precio } : p));
       setEditingId(null);
     }
   };
 
-  const handleAdd = async (payload: Omit<Promo, 'id' | 'is_active'>) => {
+  const handleAdd = async (payload: Omit<Promo, 'id' | 'activo'>) => {
     const { data, error } = await supabase.from('vitalfood_promos').insert(payload).select().single();
     if (!error && data) {
       setPromos([data, ...promos]);
@@ -432,18 +483,18 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
       <div className="grid grid-cols-1 gap-4">
         {promos.map(promo => (
           <div key={promo.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col gap-4 relative overflow-hidden">
-             {!promo.is_active && <div className="absolute inset-0 bg-white/60 z-10" />}
+             {!promo.activo && <div className="absolute inset-0 bg-white/60 z-10" />}
              <div className="flex items-start justify-between z-20">
                 <div className="flex flex-col gap-1">
-                  <h4 className="font-bold text-gray-900 text-xl">{promo.name}</h4>
-                  <p className="text-sm text-gray-500">{promo.description}</p>
+                  <h4 className="font-bold text-gray-900 text-xl">{promo.nombre}</h4>
+                  <p className="text-sm text-gray-500">{promo.descripcion}</p>
                 </div>
                 <button onClick={() => toggleStatus(promo)}>
-                  {promo.is_active ? <ToggleRight className="w-8 h-8 text-[#3C5040]" /> : <ToggleLeft className="w-8 h-8 text-gray-300" />}
+                  {promo.activo ? <ToggleRight className="w-8 h-8 text-[#3C5040]" /> : <ToggleLeft className="w-8 h-8 text-gray-300" />}
                 </button>
              </div>
              <div className="flex items-center justify-between pt-2 z-20">
-                <span className="text-2xl font-black text-[#3C5040]">${promo.price}</span>
+                <span className="text-2xl font-black text-[#3C5040]">${promo.precio}</span>
                 <button 
                   onClick={() => setEditingId(promo.id)}
                   className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors"
@@ -458,7 +509,7 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
                     <h3 className="font-bold text-gray-900">Actualizar Precio</h3>
                     <input 
                       type="number" 
-                      defaultValue={promo.price}
+                      defaultValue={promo.precio}
                       id="edit-promo-price"
                       className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 text-center text-2xl font-black outline-none"
                     />
@@ -494,10 +545,10 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
               <button onClick={() => setShowAdd(false)} className="flex-1 bg-gray-50 py-4 rounded-2xl font-bold text-gray-400">Descartar</button>
               <button 
                 onClick={() => {
-                  const name = (document.getElementById('add-promo-name') as HTMLInputElement).value;
-                  const desc = (document.getElementById('add-promo-desc') as HTMLTextAreaElement).value;
-                  const price = (document.getElementById('add-promo-price') as HTMLInputElement).value;
-                  handleAdd({ name, description: desc, price: parseFloat(price) });
+                  const nombre = (document.getElementById('add-promo-name') as HTMLInputElement).value;
+                  const descripcion = (document.getElementById('add-promo-desc') as HTMLTextAreaElement).value;
+                  const precio = (document.getElementById('add-promo-price') as HTMLInputElement).value;
+                  handleAdd({ nombre, descripcion, precio: parseFloat(precio), tipo: 'semanal', dias: 5 });
                 }}
                 className="flex-1 bg-[#3C5040] py-4 rounded-2xl font-bold text-white shadow-xl"
               >
@@ -514,6 +565,8 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
 // ── Modals Helper ────────────────────────────────────────────────
 
 function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => void, onSave: (u: any) => void }) {
+  const [imageUrls, setImageUrls] = useState<string[]>(item.image_url ? [item.image_url] : []);
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
@@ -521,13 +574,17 @@ function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => 
         <div className="flex flex-col gap-3">
            <textarea id="edit-f-desc" defaultValue={item.description || ''} className="p-3 bg-gray-50 border rounded-xl text-sm" rows={2} />
            <input id="edit-f-price" type="number" defaultValue={item.price} className="p-3 bg-gray-50 border rounded-xl text-sm font-bold" />
+           <div className="mt-2">
+             <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
+           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-2">
            <button onClick={onClose} className="flex-1 py-3 font-bold text-gray-400">Cancelar</button>
            <button 
              onClick={() => onSave({ 
                description: (document.getElementById('edit-f-desc') as any).value,
-               price: parseFloat((document.getElementById('edit-f-price') as any).value)
+               price: parseFloat((document.getElementById('edit-f-price') as any).value),
+               image_url: imageUrls[0] || null
              })}
              className="flex-1 py-3 bg-[#3C5040] text-white rounded-2xl font-bold shadow-lg"
            >
@@ -540,10 +597,12 @@ function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => 
 }
 
 function AddModal({ onClose, onSave, categories }: { onClose: () => void, onSave: (u: any) => void, categories: string[] }) {
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5">
-        <h3 className="text-xl font-bold text-gray-900 animate-pulse">Nuevo Ítem Fijo</h3>
+      <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-gray-900 animate-pulse mt-2">Nuevo Ítem Fijo</h3>
         <div className="flex flex-col gap-4">
            <select id="add-f-cat" className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm appearance-none outline-none">
               {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -551,15 +610,19 @@ function AddModal({ onClose, onSave, categories }: { onClose: () => void, onSave
            <input id="add-f-name" placeholder="Nombre del plato..." className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm outline-none" />
            <textarea id="add-f-desc" placeholder="Descripción..." className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm outline-none" rows={2} />
            <input id="add-f-price" type="number" placeholder="Precio" className="p-4 bg-gray-50 border-gray-100 border rounded-2xl text-sm font-bold outline-none" />
+           <div className="mt-2">
+             <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
+           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 mt-4 mb-2">
            <button onClick={onClose} className="flex-1 py-4 font-bold text-gray-400">Cancelar</button>
            <button 
              onClick={() => onSave({ 
                name: (document.getElementById('add-f-name') as any).value,
                category: (document.getElementById('add-f-cat') as any).value,
                description: (document.getElementById('add-f-desc') as any).value,
-               price: parseFloat((document.getElementById('add-f-price') as any).value)
+               price: parseFloat((document.getElementById('add-f-price') as any).value),
+               image_url: imageUrls[0] || null
              })}
              className="flex-1 py-4 bg-[#3C5040] text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all"
            >

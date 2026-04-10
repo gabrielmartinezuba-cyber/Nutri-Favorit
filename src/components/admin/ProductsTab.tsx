@@ -52,7 +52,7 @@ const EMPTY_FORM: FormData = {
 // ── Image Compressor (Canvas → WebP) ────────────────────────────
 type CompressResult = { blob: Blob; sizeKB: number; qualityPct: number; url: string };
 
-async function compressToWebP(
+export async function compressToWebP(
   file: File,
   maxKB = 180,       // Target < 200KB con margen
   maxDim = 1200,     // Max dimensión HD
@@ -112,12 +112,14 @@ async function compressToWebP(
 }
 
 // ── Image Uploader Component ─────────────────────────────────────
-function ImageUploader({
+export function ImageUploader({
   currentUrls,
   onUrlsChanged,
+  maxImages = 3
 }: {
   currentUrls: string[] | null;
   onUrlsChanged: (urls: string[]) => void;
+  maxImages?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [compressing, setCompressing] = useState(false);
@@ -125,8 +127,8 @@ function ImageUploader({
   const [error, setError] = useState('');
 
   const handleFiles = useCallback(async (files: FileList) => {
-    if (files.length + previews.length > 3) {
-      setError('Máximo 3 imágenes por producto.');
+    if (files.length + previews.length > maxImages) {
+      setError(`Máximo ${maxImages} imagen(es).`);
       return;
     }
 
@@ -191,7 +193,7 @@ function ImageUploader({
                 </button>
               </div>
             ))}
-            {previews.length < 3 && (
+            {previews.length < maxImages && (
                <div className="flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors">
                   <Plus className="w-6 h-6 text-gray-300" />
                </div>
@@ -204,8 +206,8 @@ function ImageUploader({
             ) : (
               <ImageIcon className="w-8 h-8 text-gray-300" />
             )}
-            <span className="text-sm font-medium">
-              {compressing ? 'Comprimiendo a WebP HD…' : 'Arrastrá o tocá para subir (Máx 3)'}
+            <span className="text-sm font-medium text-center px-4">
+              {compressing ? 'Comprimiendo a WebP HD…' : `Arrastrá o tocá para subir (Máx ${maxImages})`}
             </span>
           </div>
         )}
