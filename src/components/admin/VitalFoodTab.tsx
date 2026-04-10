@@ -114,13 +114,13 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
     veggie: { desc: '', price: 0, image_url: null as string | null },
     proteica: { desc: '', price: 0, image_url: null as string | null }
   });
-  const [desserts, setDesserts] = useState<{name: string, price: number}[]>([]);
+  const [desserts, setDesserts] = useState<{name: string, price: number, image_url: string | null}[]>([]);
 
-  const handlePostreAdd = () => setDesserts([...desserts, { name: '', price: 0 }]);
+  const handlePostreAdd = () => setDesserts([...desserts, { name: '', price: 0, image_url: null }]);
   const handlePostreRemove = (idx: number) => setDesserts(desserts.filter((_, i) => i !== idx));
-  const updatePostre = (idx: number, field: 'name' | 'price', value: string | number) => {
+  const updatePostre = (idx: number, field: 'name' | 'price' | 'image_url', value: any) => {
     const next = [...desserts];
-    next[idx] = { ...next[idx], [field]: value };
+    (next[idx] as any)[field] = value;
     setDesserts(next);
   };
 
