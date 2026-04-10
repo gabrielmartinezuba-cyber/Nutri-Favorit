@@ -23,15 +23,25 @@ export default function VitalFoodPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadData() {
       try {
-        const todayString = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayString = `${year}-${month}-${day}`;
         
+        console.log('Fetching VitalFood data for:', todayString);
+
         const [menusRes, fixedRes, promosRes] = await Promise.all([
           supabase.from('vitalfood_daily_menus').select('*').eq('menu_date', todayString).eq('status', 'published').maybeSingle(),
           supabase.from('vitalfood_fixed_items').select('*').eq('is_active', true),
           supabase.from('vitalfood_promos').select('*').eq('activo', true)
         ]);
+
+        if (!mounted) return;
 
         if (menusRes.error) console.error('Error fetching today menu:', menusRes.error);
         if (fixedRes.error) console.error('Error fetching fixed items:', fixedRes.error);
@@ -66,11 +76,13 @@ export default function VitalFoodPage() {
       } catch (e) {
         console.error('CRITICAL: Fatal error loading VitalFood data:', e);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     loadData();
-  }, []);
+    return () => { mounted = false; };
+  }, [supabase]);
   const addItem = useCartStore(state => state.addItem);
 
   const handleAddToCart = (item: any) => {
