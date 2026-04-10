@@ -21,7 +21,7 @@ export type DailyMenu = {
     veggie: { desc: string; price: number; image_url?: string | null };
     proteica: { desc: string; price: number; image_url?: string | null };
   };
-  desserts: { name: string; price: number }[];
+  desserts: { name: string; price: number; image_url?: string | null }[];
   status: 'published' | 'scheduled';
 };
 
@@ -202,7 +202,11 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
         proteica: { desc: menu.options?.proteica?.desc || '', price: menu.options?.proteica?.price || 0, image_url: menu.options?.proteica?.image_url || null },
     };
     setOptions(duplicatedOptions);
-    setDesserts(menu.desserts);
+    setDesserts((menu.desserts || []).map(d => ({
+        name: d.name || '',
+        price: d.price || 0,
+        image_url: d.image_url || null
+    })));
     setDate(new Date().toISOString().split('T')[0]);
   };
 
