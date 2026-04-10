@@ -79,9 +79,9 @@ export default function VitalFoodPage() {
   return (
     <div className="pb-32 pt-4 flex flex-col gap-6 bg-[#f8f9f4] min-h-[100dvh] -mt-16 pt-20 -mx-4 px-4">
       {/* Header VitalFood */}
-      <div className="flex items-center justify-between bg-white rounded-2xl px-6 h-28 shadow-sm border border-gray-50 flex-shrink-0">
-        <div className="w-[150px] h-full flex items-center justify-center">
-          <img src="/logovitalfood.png" alt="VitalFood Logo" className="w-full h-auto max-h-24 object-contain" />
+      <div className="flex items-center justify-between bg-white rounded-2xl px-6 h-32 shadow-sm border border-gray-50 flex-shrink-0">
+        <div className="w-[180px] h-full flex items-center justify-center">
+          <img src="/logovitalfood.png" alt="VitalFood Logo" className="w-full h-auto max-h-28 object-contain" />
         </div>
         <Link href="/tienda/favorit" className="flex items-center gap-2 bg-[#fdfafb] hover:bg-[#f6eef1] transition-colors pl-1.5 pr-4 py-1.5 rounded-full border border-gray-100 active:scale-95 shadow-sm">
           <div className="h-8 w-8 flex items-center justify-center bg-[#6B2139] rounded-full drop-shadow-sm">

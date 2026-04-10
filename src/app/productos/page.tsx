@@ -24,20 +24,18 @@ export default function BrandSelectorPage() {
 
       <Link href="/tienda/favorit" className="w-full max-w-[280px] transition-transform active:scale-95 flex flex-col items-center justify-center gap-4 group">
         <img 
-          src="/logofav.png" 
+          src="/favorit3d.png" 
           alt="Favorit Logo" 
           className="w-full h-auto object-contain animate-float shadow-3d group-hover:scale-105 transition-transform duration-300"
         />
-        <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">Congelados & Proteína</span>
       </Link>
       
       <Link href="/tienda/vitalfood" className="w-full max-w-[280px] transition-transform active:scale-95 flex flex-col items-center justify-center gap-6 group">
         <img 
-          src="/logovitalfood.png" 
+          src="/vitalfood3d.png" 
           alt="VitalFood Logo" 
           className="w-full h-auto object-contain animate-float-delayed shadow-3d scale-110 group-hover:scale-110 group-hover:drop-shadow-2xl transition-all duration-300"
         />
-        <span className="text-sm font-bold text-[#3C5040] uppercase tracking-widest">Viandas del día</span>
       </Link>
     </div>
   );
