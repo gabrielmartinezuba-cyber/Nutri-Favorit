@@ -24,8 +24,8 @@ export default async function ProductsPage() {
     <div className="pb-32 pt-4 flex flex-col gap-6">
       {/* Header Favorit */}
       <div className="flex items-center justify-between bg-[#6B2139] rounded-2xl px-6 h-28 shadow-sm border-none flex-shrink-0">
-        <div className="w-[120px] flex items-center justify-center h-full">
-          <img src="/logofav.png" alt="Favorit Logo" className="w-full h-auto max-h-16 object-contain brightness-0 invert" />
+        <div className="w-[150px] flex items-center justify-center h-full">
+          <img src="/logofav.png" alt="Favorit Logo" className="w-full h-auto max-h-18 object-contain brightness-0 invert" />
         </div>
         <a href="/tienda/vitalfood" className="flex items-center gap-2 bg-[#f0f7f0] hover:bg-[#e4efe4] transition-colors pl-1.5 pr-4 py-1.5 rounded-full border border-[#c8d8c8] active:scale-95 shadow-sm">
           <img src="/logovitalfood.png" alt="VitalFood Mini" className="h-8 w-auto object-contain drop-shadow-sm bg-white rounded-full p-1" />
