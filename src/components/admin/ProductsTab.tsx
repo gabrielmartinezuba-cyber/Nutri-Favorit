@@ -126,6 +126,11 @@ export function ImageUploader({
   const [previews, setPreviews] = useState<string[]>(currentUrls || []);
   const [error, setError] = useState('');
 
+  // Sync previews with prop changes (vital for duplication)
+  useEffect(() => {
+    setPreviews(currentUrls || []);
+  }, [currentUrls]);
+
   const handleFiles = useCallback(async (files: FileList) => {
     if (files.length + previews.length > maxImages) {
       setError(`Máximo ${maxImages} imagen(es).`);
