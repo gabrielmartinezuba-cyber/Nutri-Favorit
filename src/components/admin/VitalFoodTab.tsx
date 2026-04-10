@@ -178,7 +178,8 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
       setSuccessMsg(status === 'published' ? 'Menú publicado correctamente' : 'Menú programado correctamente');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e: any) {
-      setError('Error guardando el menú, revisá tu conexión o intentá nuevamente.');
+      console.error('Error in handleSave MenuDia:', e);
+      setError('Error guardando el menú: ' + (e.message || 'revisá tu conexión o intentá nuevamente.'));
     } finally {
       setLoading(false);
     }
@@ -362,47 +363,56 @@ function FixedItemsView({ initialItems }: { initialItems: FixedItem[] }) {
   };
 
   const handleUpdate = async (id: string, updates: Partial<FixedItem>) => {
-    let finalImageUrl = updates.image_url !== undefined ? updates.image_url : null;
-    if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
-      const blob = await fetch(finalImageUrl).then(r => r.blob());
-      const fileExt = blob.type.split('/')[1] || 'webp';
-      const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
-      if (!uploadError) {
+    try {
+      let finalImageUrl = updates.image_url !== undefined ? updates.image_url : null;
+      if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+        const blob = await fetch(finalImageUrl).then(r => r.blob());
+        const fileExt = blob.type.split('/')[1] || 'webp';
+        const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+        if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
         finalImageUrl = publicUrl;
       }
-    }
 
-    const payload = { ...updates };
-    if (finalImageUrl !== undefined && finalImageUrl !== null) {
-        payload.image_url = finalImageUrl;
-    }
+      const payload = { ...updates };
+      if (finalImageUrl !== undefined && finalImageUrl !== null) {
+          payload.image_url = finalImageUrl;
+      }
 
-    const { error } = await supabase.from('vitalfood_fixed_items').update(payload).eq('id', id);
-    if (!error) {
+      const { error } = await supabase.from('vitalfood_fixed_items').update(payload).eq('id', id);
+      if (error) throw error;
+
       setItems(items.map(i => i.id === id ? { ...i, ...updates, image_url: finalImageUrl ?? i.image_url } : i));
       setEditingId(null);
+    } catch (e: any) {
+      console.error('Error updating item:', e);
+      alert('Error al actualizar el plato: ' + (e.message || 'Error desconocido'));
     }
   };
 
   const handleAdd = async (payload: Omit<FixedItem, 'id' | 'is_active'>) => {
-    let finalImageUrl = payload.image_url;
-    if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
-      const blob = await fetch(finalImageUrl).then(r => r.blob());
-      const fileExt = blob.type.split('/')[1] || 'webp';
-      const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
-      if (!uploadError) {
+    try {
+      let finalImageUrl = payload.image_url;
+      if (finalImageUrl && finalImageUrl.startsWith('blob:')) {
+        const blob = await fetch(finalImageUrl).then(r => r.blob());
+        const fileExt = blob.type.split('/')[1] || 'webp';
+        const fileName = `vf_${Date.now()}_${Math.floor(Math.random()*1000)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(fileName, blob);
+        if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(fileName);
         finalImageUrl = publicUrl;
       }
-    }
 
-    const { data, error } = await supabase.from('vitalfood_fixed_items').insert({ ...payload, image_url: finalImageUrl }).select().single();
-    if (!error && data) {
-      setItems([data, ...items]);
-      setShowAdd(false);
+      const { data, error } = await supabase.from('vitalfood_fixed_items').insert({ ...payload, image_url: finalImageUrl }).select().single();
+      if (error) throw error;
+      if (data) {
+        setItems([data, ...items]);
+        setShowAdd(false);
+      }
+    } catch (e: any) {
+      console.error('Error adding item:', e);
+      alert('Error al crear el plato: ' + (e.message || 'Error desconocido'));
     }
   };
 
@@ -483,18 +493,28 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
   };
 
   const handleUpdate = async (id: string, precio: number) => {
-    const { error } = await supabase.from('vitalfood_promos').update({ precio }).eq('id', id);
-    if (!error) {
+    try {
+      const { error } = await supabase.from('vitalfood_promos').update({ precio }).eq('id', id);
+      if (error) throw error;
       setPromos(promos.map(p => p.id === id ? { ...p, precio } : p));
       setEditingId(null);
+    } catch (e: any) {
+      console.error('Error updating promo:', e);
+      alert('Error al actualizar la promo: ' + (e.message || 'Error desconocido'));
     }
   };
 
   const handleAdd = async (payload: Omit<Promo, 'id' | 'activo'>) => {
-    const { data, error } = await supabase.from('vitalfood_promos').insert(payload).select().single();
-    if (!error && data) {
-      setPromos([data, ...promos]);
-      setShowAdd(false);
+    try {
+      const { data, error } = await supabase.from('vitalfood_promos').insert(payload).select().single();
+      if (error) throw error;
+      if (data) {
+        setPromos([data, ...promos]);
+        setShowAdd(false);
+      }
+    } catch (e: any) {
+      console.error('Error adding promo:', e);
+      alert('Error al crear la promo: ' + (e.message || 'Error desconocido'));
     }
   };
 
@@ -594,31 +614,51 @@ function PromosView({ initialPromos }: { initialPromos: Promo[] }) {
 
 // ── Modals Helper ────────────────────────────────────────────────
 
-function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => void, onSave: (u: any) => void }) {
+function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => void, onSave: (u: any) => Promise<void> }) {
+  const [description, setDescription] = useState(item.description || '');
+  const [price, setPrice] = useState(item.price);
   const [imageUrls, setImageUrls] = useState<string[]>(item.image_url ? [item.image_url] : []);
+  const [saving, setSaving] = useState(false);
   
+  const handleInternalSave = async () => {
+    setSaving(true);
+    await onSave({ description, price, image_url: imageUrls[0] || null });
+    setSaving(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
         <h3 className="font-bold text-gray-900">Editar Plato Fijo</h3>
         <div className="flex flex-col gap-3">
-           <textarea id="edit-f-desc" defaultValue={item.description || ''} className="p-3 bg-gray-50 border border-gray-200 !text-gray-900 rounded-xl text-sm placeholder:text-gray-400" rows={2} />
-           <input id="edit-f-price" type="number" defaultValue={item.price} className="p-3 bg-gray-50 border border-gray-200 !text-[#E27E36] rounded-xl text-sm font-bold placeholder:text-[#E27E36]/50" />
+           <textarea 
+             value={description} 
+             onChange={e => setDescription(e.target.value)} 
+             className="p-3 bg-gray-50 border border-gray-200 !text-gray-900 rounded-xl text-sm placeholder:text-gray-400" 
+             rows={2} 
+           />
+           <div className="relative">
+             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold text-sm">$</span>
+             <input 
+               type="number" 
+               value={price} 
+               onChange={e => setPrice(parseFloat(e.target.value) || 0)} 
+               className="w-full p-3 pl-7 bg-gray-50 border border-gray-200 !text-[#E27E36] rounded-xl text-sm font-bold placeholder:text-[#E27E36]/50" 
+             />
+           </div>
            <div className="mt-2">
              <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
            </div>
         </div>
         <div className="flex gap-2 mt-2">
-           <button onClick={onClose} className="flex-1 py-3 font-bold text-gray-400">Cancelar</button>
+           <button onClick={onClose} disabled={saving} className="flex-1 py-3 font-bold text-gray-400 disabled:opacity-50">Cancelar</button>
            <button 
-             onClick={() => onSave({ 
-               description: (document.getElementById('edit-f-desc') as any).value,
-               price: parseFloat((document.getElementById('edit-f-price') as any).value),
-               image_url: imageUrls[0] || null
-             })}
-             className="flex-1 py-3 bg-[#3C5040] text-white rounded-2xl font-bold shadow-lg"
+             onClick={handleInternalSave}
+             disabled={saving}
+             className="flex-1 py-3 bg-[#3C5040] text-white rounded-2xl font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
            >
-             Guardar
+             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+             {saving ? 'Guardando...' : 'Guardar'}
            </button>
         </div>
       </div>
@@ -626,37 +666,69 @@ function EditModal({ item, onClose, onSave }: { item: FixedItem, onClose: () => 
   );
 }
 
-function AddModal({ onClose, onSave, categories }: { onClose: () => void, onSave: (u: any) => void, categories: string[] }) {
+function AddModal({ onClose, onSave, categories }: { onClose: () => void, onSave: (u: any) => Promise<void>, categories: string[] }) {
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState(categories[0] || '');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState(0);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const handleInternalSave = async () => {
+    if(!name.trim()) return alert('El nombre es obligatorio');
+    setSaving(true);
+    await onSave({ name, category, description, price, image_url: imageUrls[0] || null });
+    setSaving(false);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-xl font-bold text-gray-900 animate-pulse mt-2">Nuevo Ítem Fijo</h3>
+        <h3 className="text-xl font-bold text-gray-900 mt-2">Nuevo Ítem Fijo</h3>
         <div className="flex flex-col gap-4">
-           <select id="add-f-cat" className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm appearance-none outline-none">
+           <select 
+             value={category} 
+             onChange={e => setCategory(e.target.value)} 
+             className="p-4 bg-gray-50 border-gray-100 border !text-gray-900 rounded-2xl text-sm appearance-none outline-none"
+           >
               {categories.map(c => <option key={c} value={c} className="text-gray-900">{c}</option>)}
            </select>
-           <input id="add-f-name" placeholder="Nombre del plato..." className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" />
-           <textarea id="add-f-desc" placeholder="Descripción..." className="p-4 bg-gray-50 border-gray-100 border text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" rows={2} />
-           <input id="add-f-price" type="number" placeholder="Precio" className="p-4 bg-gray-50 border-gray-100 border text-[#E27E36] rounded-2xl text-sm font-bold outline-none placeholder:text-[#E27E36]/50" />
+           <input 
+             placeholder="Nombre del plato..." 
+             value={name} 
+             onChange={e => setName(e.target.value)} 
+             className="p-4 bg-gray-50 border-gray-100 border !text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" 
+           />
+           <textarea 
+             placeholder="Descripción..." 
+             value={description} 
+             onChange={e => setDescription(e.target.value)} 
+             className="p-4 bg-gray-50 border-gray-100 border !text-gray-900 rounded-2xl text-sm outline-none placeholder:text-gray-400" 
+             rows={2} 
+           />
+           <div className="relative">
+             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E27E36] font-bold">$</span>
+             <input 
+               type="number" 
+               placeholder="Precio" 
+               value={price || ''} 
+               onChange={e => setPrice(parseFloat(e.target.value) || 0)} 
+               className="w-full p-4 pl-8 bg-gray-50 border-gray-100 border !text-[#E27E36] rounded-2xl text-sm font-bold outline-none placeholder:text-[#E27E36]/50" 
+             />
+           </div>
            <div className="mt-2">
              <ImageUploader currentUrls={imageUrls} onUrlsChanged={setImageUrls} maxImages={1} />
            </div>
         </div>
         <div className="flex gap-3 mt-4 mb-2">
-           <button onClick={onClose} className="flex-1 py-4 font-bold text-gray-400">Cancelar</button>
+           <button onClick={onClose} disabled={saving} className="flex-1 py-4 font-bold text-gray-400 disabled:opacity-50">Cancelar</button>
            <button 
-             onClick={() => onSave({ 
-               name: (document.getElementById('add-f-name') as any).value,
-               category: (document.getElementById('add-f-cat') as any).value,
-               description: (document.getElementById('add-f-desc') as any).value,
-               price: parseFloat((document.getElementById('add-f-price') as any).value),
-               image_url: imageUrls[0] || null
-             })}
-             className="flex-1 py-4 bg-[#3C5040] text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all"
+             onClick={handleInternalSave}
+             disabled={saving}
+             className="flex-1 py-4 bg-[#3C5040] text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
            >
-             Crear Plato
+             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+             {saving ? 'Publicando...' : 'Crear Plato'}
            </button>
         </div>
       </div>
