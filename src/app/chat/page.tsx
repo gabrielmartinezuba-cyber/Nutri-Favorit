@@ -409,7 +409,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="fixed bottom-24 left-4 right-4 z-40">
+      <div className="fixed bottom-24 inset-x-0 mx-auto max-w-2xl z-40 px-4">
         {!user ? (
           <button onClick={() => router.push('/login')}
             className="w-full glass border-2 border-brand-mostaza/30 bg-white/40 rounded-full py-4 px-6 flex items-center justify-between shadow-xl"

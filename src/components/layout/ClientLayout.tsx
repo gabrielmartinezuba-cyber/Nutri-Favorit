@@ -9,8 +9,8 @@ import PhoneBarrier from '../auth/PhoneBarrier';
  * ClientLayout — decide si renderizar Navbar + Bottombar (tienda)
  * o pasar los children directamente sin chrome (admin).
  *
- * Ambas rutas están envueltas en el App Container centrado (max-w-md)
- * para verse como una app mobile elegante en pantallas de escritorio.
+ * Ambas rutas están envueltas en el App Container centrado (max-w-2xl)
+ * para verse como una app tablet elegante en pantallas de escritorio.
  */
 export default function ClientLayout({
   children,
@@ -23,7 +23,7 @@ export default function ClientLayout({
   if (isAdminRoute) {
     // Admin: sin decoraciones de la tienda, pero dentro del contenedor centrado
     return (
-      <div className="w-full max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
+      <div className="w-full max-w-2xl mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
         {children}
       </div>
     );
@@ -31,7 +31,7 @@ export default function ClientLayout({
 
   // Tienda: layout estándar con Navbar fijo y Bottombar
   return (
-    <div className="w-full max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
+    <div className="w-full max-w-2xl mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
       <PhoneBarrier />
       <Navbar />
       {/* pb-24 compensa el Bottombar fijo para que el contenido no quede tapado */}

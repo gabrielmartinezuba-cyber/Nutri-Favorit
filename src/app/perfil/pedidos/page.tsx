@@ -202,7 +202,7 @@ export default function PedidosPage() {
   const doneOrders   = orders.filter(o => isDone(o.status));
 
   return (
-    <div className="max-w-xl mx-auto pb-10">
+    <div className="max-w-xl mx-auto pb-10 min-h-screen">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4 flex flex-col gap-5">
 
         {/* Header */}

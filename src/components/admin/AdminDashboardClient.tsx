@@ -734,7 +734,7 @@ export default function AdminDashboardClient({
       </AnimatePresence>
 
       {/* ── Bottombar Admin ── */}
-      <div className="fixed bottom-0 inset-x-0 mx-auto max-w-md z-50 bg-white border-t border-gray-200 px-2 py-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
+      <div className="fixed bottom-0 inset-x-0 mx-auto max-w-2xl z-50 bg-white border-t border-gray-200 px-2 py-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-around w-full">
           <BottomTab icon={<ShoppingBag className="w-5 h-5" />} label="Pedidos" active={activeTab === 'pedidos'} badge={stats.ordenesPendientes} onClick={() => { setSearch(''); setActiveTab('pedidos'); }} />
           <BottomTab icon={<CircleDollarSign className="w-5 h-5" />} label="Ventas" active={activeTab === 'ventas'} onClick={() => { setSearch(''); setActiveTab('ventas'); }} />

@@ -32,7 +32,7 @@ export default function Bottombar() {
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 mx-auto max-w-md z-[100] bg-white pb-safe border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+    <nav className="fixed bottom-0 inset-x-0 mx-auto max-w-2xl z-[100] bg-white pb-safe border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
       <ul className="flex justify-around items-center h-20 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;

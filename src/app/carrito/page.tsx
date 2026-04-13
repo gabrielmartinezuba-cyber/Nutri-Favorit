@@ -245,7 +245,7 @@ _Pedido generado desde Favorit AI_`;
       </div>
 
       {/* Sticky Bottom Bar */}
-      <div className="fixed bottom-[80px] left-0 right-0 z-40 bg-white border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] rounded-t-[32px] px-6 pt-4 pb-6 max-w-2xl mx-auto pb-safe">
+      <div className="fixed bottom-[80px] inset-x-0 mx-auto max-w-2xl z-40 bg-white border-t border-gray-100 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] rounded-t-[32px] px-6 pt-4 pb-6 pb-safe">
         <div className="flex flex-col gap-2.5">
           <div className="flex justify-between items-center px-1">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">Subtotal</span>
