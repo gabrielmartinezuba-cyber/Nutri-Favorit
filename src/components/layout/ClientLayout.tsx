@@ -9,8 +9,8 @@ import PhoneBarrier from '../auth/PhoneBarrier';
  * ClientLayout — decide si renderizar Navbar + Bottombar (tienda)
  * o pasar los children directamente sin chrome (admin).
  *
- * Se usa en el root layout para que /admin tenga UI 100% independiente
- * sin necesidad de reorganizar la estructura de carpetas de rutas.
+ * Ambas rutas están envueltas en el App Container centrado (max-w-md)
+ * para verse como una app mobile elegante en pantallas de escritorio.
  */
 export default function ClientLayout({
   children,
@@ -21,13 +21,17 @@ export default function ClientLayout({
   const isAdminRoute = pathname.startsWith('/admin');
 
   if (isAdminRoute) {
-    // Admin: sin decoraciones de la tienda, ocupa todo el viewport
-    return <>{children}</>;
+    // Admin: sin decoraciones de la tienda, pero dentro del contenedor centrado
+    return (
+      <div className="w-full max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
+        {children}
+      </div>
+    );
   }
 
   // Tienda: layout estándar con Navbar fijo y Bottombar
   return (
-    <>
+    <div className="w-full max-w-md mx-auto min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
       <PhoneBarrier />
       <Navbar />
       {/* pb-24 compensa el Bottombar fijo para que el contenido no quede tapado */}
@@ -35,6 +39,6 @@ export default function ClientLayout({
         {children}
       </main>
       <Bottombar />
-    </>
+    </div>
   );
 }

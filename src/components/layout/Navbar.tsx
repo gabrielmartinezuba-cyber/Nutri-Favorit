@@ -14,7 +14,7 @@ export default function Navbar() {
   const isStorePage = pathname === '/tienda/favorit' || pathname === '/tienda/vitalfood';
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-brand-borravino shadow-md h-16 flex items-center justify-between px-6 border-b border-brand-mostaza/20">
+    <nav className="fixed top-0 inset-x-0 mx-auto max-w-md z-50 bg-brand-borravino shadow-md h-16 flex items-center justify-between px-6 border-b border-brand-mostaza/20">
       <div className="flex items-center h-full py-2.5 gap-3">
         {!isStorePage && (
           <>

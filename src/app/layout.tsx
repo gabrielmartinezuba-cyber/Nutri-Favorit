@@ -37,7 +37,7 @@ export default function RootLayout({
         body ya NO tiene pb-24 fijo — ClientLayout lo aplica
         solo en las rutas de tienda donde existe el Bottombar.
       */}
-      <body className="min-h-full flex flex-col font-sans relative">
+      <body className="min-h-full bg-stone-100 flex flex-col font-sans relative">
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
