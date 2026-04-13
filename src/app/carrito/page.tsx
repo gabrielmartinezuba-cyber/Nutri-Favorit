@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCartStore } from '@/store/cartStore';
+import { useCart } from '@/store/useCart';
 import { useAuthStore } from '@/store/authStore';
 import { createClient } from '@/lib/supabase/client';
 import { Trash2, Plus, Minus, ShoppingBag, CheckCircle2, Home } from 'lucide-react';
@@ -11,7 +11,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FAVORIT_WHATSAPP } from '@/config/contacto';
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, totalPrice, totalItems, clearCart } = useCartStore();
+  const { 
+    items, 
+    removeItem, 
+    updateQuantity, 
+    clearCart, 
+    totalPrice: total, 
+    totalItems: count,
+    isHydrated
+  } = useCart();
   const user = useAuthStore(s => s.user);
   const setUser = useAuthStore(s => s.setUser);
   const [confirmed, setConfirmed] = useState(false);
@@ -19,8 +27,7 @@ export default function CartPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const total = totalPrice();
-  const count = totalItems();
+  if (!isHydrated) return null; // Wait for hydration on cart page to avoid flicker
 
   const handleCheckout = async () => {
     if (items.length === 0) return;

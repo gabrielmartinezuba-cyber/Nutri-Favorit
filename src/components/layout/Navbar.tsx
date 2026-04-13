@@ -1,13 +1,13 @@
 "use client";
 
 import { ShoppingCart, User } from 'lucide-react';
-import { useCartStore } from '@/store/cartStore';
+import { useCart } from '@/store/useCart';
 import { useAuthStore } from '@/store/authStore';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Navbar() {
-  const totalItems = useCartStore((state) => state.totalItems());
+  const { totalItems, items } = useCart();
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
 

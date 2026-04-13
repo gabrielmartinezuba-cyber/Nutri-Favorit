@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface CartItem {
   id: string;
@@ -15,42 +16,48 @@ interface CartState {
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  totalPrice: () => number;
-  totalItems: () => number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
-  addItem: (product) => {
-    set((state) => {
-      const existingItem = state.items.find((i) => i.id === product.id);
-      if (existingItem) {
-        return {
-          items: state.items.map((i) =>
-            i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-          ),
-        };
-      }
-      return { items: [...state.items, { ...product, quantity: 1 }] };
-    });
-  },
-  removeItem: (id) =>
-    set((state) => ({
-      items: state.items.filter((i) => i.id !== id),
-    })),
-  updateQuantity: (id, quantity) =>
-    set((state) => ({
-      items: state.items.map((i) =>
-        i.id === id ? { ...i, quantity: Math.max(0, quantity) } : i
-      ).filter((i) => i.quantity > 0),
-    })),
-  clearCart: () => set({ items: [] }),
-  totalPrice: () => {
-    const { items } = get();
-    return items.reduce((total, item) => total + item.price * item.quantity, 0);
-  },
-  totalItems: () => {
-    const { items } = get();
-    return items.reduce((total, item) => total + item.quantity, 0);
-  },
-}));
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
+      items: [],
+      addItem: (product) => {
+        set((state) => {
+          const existingItem = state.items.find((i) => i.id === product.id);
+          if (existingItem) {
+            return {
+              items: state.items.map((i) =>
+                i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+              ),
+            };
+          }
+          return { items: [...state.items, { ...product, quantity: 1 }] };
+        });
+      },
+      removeItem: (id) =>
+        set((state) => ({
+          items: state.items.filter((i) => i.id !== id),
+        })),
+      updateQuantity: (id, quantity) =>
+        set((state) => ({
+          items: (state.items || [])
+            .map((i) => (i.id === id ? { ...i, quantity: Math.max(0, quantity) } : i))
+            .filter((i) => i.quantity > 0),
+        })),
+      clearCart: () => set({ items: [] }),
+    }),
+    {
+      name: 'cart-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+// Helper functions for components to use instead of store methods
+export const getCartTotal = (items: CartItem[]) => 
+  items.reduce((total, item) => total + item.price * item.quantity, 0);
+
+export const getCartCount = (items: CartItem[]) => 
+  items.reduce((total, item) => total + item.quantity, 0);
+

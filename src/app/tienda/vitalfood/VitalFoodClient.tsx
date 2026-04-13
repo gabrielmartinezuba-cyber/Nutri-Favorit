@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Minus } from 'lucide-react';
-import { useCartStore } from '@/store/cartStore';
+import { useCart } from '@/store/useCart';
 import { FAVORIT_WHATSAPP } from '@/config/contacto';
 
 type Tab = 'menu-dia' | 'menu-fijo' | 'promos';
@@ -41,7 +41,7 @@ interface Props {
 
 export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, todayStr }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('menu-dia');
-  const { items, addItem, updateQuantity } = useCartStore();
+  const { items, addItem, updateQuantity } = useCart();
 
   const getItemQty = (id: string) => items.find(i => i.id === id)?.quantity || 0;
 

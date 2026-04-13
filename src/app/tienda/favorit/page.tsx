@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { Filter, Star } from 'lucide-react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ProductGallery } from '@/components/products/ProductGallery';
 import ProductsLoading from './loading';
@@ -27,10 +28,10 @@ export default async function ProductsPage() {
         <div className="w-[120px] flex items-center justify-center h-full">
           <img src="/logofav.png" alt="Favorit Logo" className="w-full h-auto max-h-12 object-contain brightness-0 invert" />
         </div>
-        <a href="/tienda/vitalfood" className="flex items-center gap-2 bg-[#f0f7f0] hover:bg-[#e4efe4] transition-colors pl-1 pr-3 py-1 rounded-full border border-[#c8d8c8] active:scale-95 shadow-sm">
+        <Link href="/tienda/vitalfood" className="flex items-center gap-2 bg-[#f0f7f0] hover:bg-[#e4efe4] transition-colors pl-1 pr-3 py-1 rounded-full border border-[#c8d8c8] active:scale-95 shadow-sm">
           <img src="/logovitalfood.png" alt="VitalFood Mini" className="h-7 w-auto object-contain drop-shadow-sm bg-white rounded-full p-0.5" />
           <span className="text-[10px] font-bold text-[#3c5040] uppercase tracking-wider">Ir a VitalFood</span>
-        </a>
+        </Link>
       </div>
 
       <Suspense fallback={<ProductsLoading />}>
