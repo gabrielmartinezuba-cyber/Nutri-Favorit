@@ -9,16 +9,15 @@
   --font-heading: var(--font-poppins);
 }
 
+/* ── Force Light Mode globally ──────────────────────────────────
+   Prevents dark-mode browsers from inverting text/bg colors.
+   color-scheme: light tells the browser to ALWAYS use light chrome
+   (scrollbars, inputs, selects). Combined with no dark @media below,
+   this completely eliminates the white-on-white dark mode bug. */
 :root {
-  --background: #fdfaf6; /* Very light warm off-white */
+  color-scheme: light;
+  --background: #fdfaf6;
   --foreground: #1a1a1a;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #140d10; /* Very dark borravino/warm gray */
-    --foreground: #fcfcfc;
-  }
 }
 
 body {
@@ -28,7 +27,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Base utilities for Glassmorphism */
+/* ── Glassmorphism ─────────────────────────────────────────────── */
 @utility glass {
   background-color: rgba(255, 255, 255, 0.4);
   backdrop-filter: blur(16px);
@@ -49,34 +48,44 @@ body {
   font-family: var(--font-heading), sans-serif;
 }
 
-/* Admin form inputs */
+/* ── Admin form inputs ─────────────────────────────────────────── */
 @utility input-field {
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  color: inherit;
+  color: #111827;
   outline: none;
   transition: border-color 0.2s;
   
   &:focus {
     border-color: rgba(107, 33, 57, 0.6);
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: #ffffff;
   }
 }
 
-/* Fix for Browser Autofill background in dark mode */
+/* ── Force light colors on all inputs/textareas ─────────────────
+   Prevents browsers in dark mode from using their own dark
+   background for native form elements. */
+input,
+textarea,
+select {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+/* Fix for Browser Autofill background */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active,
 input:-internal-autofill-selected {
-  -webkit-box-shadow: 0 0 0 1000px #21191b inset !important;
-  box-shadow: 0 0 0 1000px #21191b inset !important;
-  -webkit-text-fill-color: inherit !important;
-  color: inherit !important;
-  caret-color: inherit !important;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  color: #111827 !important;
+  caret-color: #111827 !important;
   transition: background-color 50000s ease-in-out 0s;
 }

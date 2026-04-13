@@ -384,7 +384,7 @@ export default function ChatPage() {
                   <div className={`max-w-[85%] p-4 rounded-3xl text-[15px] font-medium leading-relaxed
                     ${msg.role === 'user'
                       ? 'bg-brand-verde text-white rounded-br-sm shadow-md'
-                      : 'glass border border-white/40 text-foreground rounded-bl-sm shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
+                      : 'bg-white border border-gray-100 text-gray-900 rounded-bl-sm shadow-[0_4px_20px_rgba(0,0,0,0.03)]'
                     }`}
                   >
                     {msg.content}
@@ -423,14 +423,14 @@ export default function ChatPage() {
             </div>
           </button>
         ) : (
-          <div className="glass rounded-full border border-white/60 shadow-lg flex items-center p-2">
+          <div className="bg-white rounded-full border border-gray-200 shadow-lg flex items-center p-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage(input)}
               placeholder="Ej: armame un plan de 5 días..."
-              className="flex-1 bg-transparent px-4 py-2 text-sm font-medium focus:outline-none placeholder-gray-400"
+              className="flex-1 bg-transparent px-4 py-2 text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none"
             />
             <button
               onClick={() => sendMessage(input)}

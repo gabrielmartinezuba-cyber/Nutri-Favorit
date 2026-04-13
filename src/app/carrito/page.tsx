@@ -106,21 +106,15 @@ _Pedido generado desde Favorit AI_`;
       console.error('[Checkout] Supabase error (non-blocking):', err);
     } finally {
       // ── 3. Always: clear cart + release button ──────────────────
-      // Runs regardless of any Supabase failure — button never gets stuck
+      // Guaranteed to run even if Supabase fails
       clearCart();
       setLoading(false);
 
-      // ── 4. Open WhatsApp with popup-blocked fallback ────────────
-      // On desktop, window.open() is often blocked by the browser.
-      // If blocked (returns null), we redirect the current tab instead.
-      const newTab = window.open(whatsappUrl, '_blank');
-      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-        // Popup blocked → redirect current tab to WhatsApp directly
-        window.location.href = whatsappUrl;
-      } else {
-        // Popup succeeded → show success screen in current tab
-        setConfirmed(true);
-      }
+      // ── 4. Redirect to WhatsApp in the SAME tab ─────────────────
+      // window.open() is blocked by iOS Safari & Chrome when called
+      // inside async callbacks. window.location.href is ALWAYS allowed
+      // by every browser and opens the native WhatsApp app on mobile.
+      window.location.href = whatsappUrl;
     }
   };
 
