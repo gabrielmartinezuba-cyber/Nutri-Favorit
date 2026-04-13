@@ -145,7 +145,7 @@ export default function AdminDashboardClient({
   stats: Stats;
   vitalFoodData: VitalFoodData;
 }) {
-  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'ventas' | 'clientes' | 'productos'>('metricas');
+  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'ventas' | 'clientes' | 'productos'>('pedidos');
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -508,9 +508,9 @@ export default function AdminDashboardClient({
       {/* ── Bottombar Admin ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-2 py-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-around max-w-lg mx-auto">
-          <BottomTab icon={<TrendingUp className="w-5 h-5" />} label="Métricas" active={activeTab === 'metricas'} onClick={() => { setSearch(''); setActiveTab('metricas'); }} />
           <BottomTab icon={<ShoppingBag className="w-5 h-5" />} label="Pedidos" active={activeTab === 'pedidos'} badge={stats.ordenesPendientes} onClick={() => { setSearch(''); setActiveTab('pedidos'); }} />
           <BottomTab icon={<CircleDollarSign className="w-5 h-5" />} label="Ventas" active={activeTab === 'ventas'} onClick={() => { setSearch(''); setActiveTab('ventas'); }} />
+          <BottomTab icon={<TrendingUp className="w-5 h-5" />} label="Métricas" active={activeTab === 'metricas'} onClick={() => { setSearch(''); setActiveTab('metricas'); }} />
           <BottomTab icon={<Users className="w-5 h-5" />} label="Clientes" active={activeTab === 'clientes'} onClick={() => { setSearch(''); setActiveTab('clientes'); }} />
           <BottomTab icon={<Package className="w-5 h-5" />} label="Catálogo" active={activeTab === 'productos'} onClick={() => { setSearch(''); setActiveTab('productos'); }} />
         </div>
