@@ -181,28 +181,36 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
                     const itemId = `vf-fixed-${item.id}`;
                     const qty = getItemQty(itemId);
                     return (
-                      <div key={item.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-4">
+                      <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
                         {item.image_url && (
                           <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-50">
                             <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                           </div>
                         )}
-                        <div className="flex-1 pr-2">
-                          <h3 className="font-bold text-gray-900">{item.name}</h3>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                          <span className="block text-md font-black text-[#E27E36] mt-2">${item.price}</span>
-                        </div>
-                        {qty === 0 ? (
-                          <button onClick={() => handleAddToCart({ ...item, id: itemId })} className="bg-[#3C5040] text-white p-2.5 rounded-xl hover:bg-[#2c3a2f] active:scale-95 transition-transform shrink-0 shadow-md shadow-[#3C5040]/20">
-                            <Plus className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <div className="flex flex-col items-center gap-2 bg-gray-50 rounded-xl p-1.5 border border-gray-200 shrink-0">
-                            <button onClick={() => handleUpdateQty(itemId, qty + 1)} className="text-[#3C5040]"><Plus className="w-4 h-4" strokeWidth={3} /></button>
-                            <span className="font-black text-sm text-gray-700">{qty}</span>
-                            <button onClick={() => handleUpdateQty(itemId, qty - 1)} className="text-[#3C5040]"><Minus className="w-4 h-4" strokeWidth={3} /></button>
+                        <div className="flex-1 flex flex-col min-w-0">
+                          <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                          
+                          <div className="flex items-center justify-between mt-auto pt-2">
+                             <span className="text-lg font-black text-[#E27E36]">${item.price}</span>
+                             <div className="scale-90 origin-right">
+                              {qty === 0 ? (
+                                <button 
+                                  onClick={() => handleAddToCart({ ...item, id: itemId })}
+                                  className="bg-[#3C5040] text-white p-2.5 rounded-xl hover:bg-[#2c3a2f] active:scale-95 transition-transform shadow-md shadow-[#3C5040]/20"
+                                >
+                                  <Plus className="w-5 h-5" />
+                                </button>
+                              ) : (
+                                <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-1.5 border border-gray-200">
+                                  <button onClick={() => handleUpdateQty(itemId, qty - 1)} className="text-[#3C5040] font-bold"><Minus className="w-4 h-4" strokeWidth={3} /></button>
+                                  <span className="font-black text-sm w-4 text-center text-gray-700">{qty}</span>
+                                  <button onClick={() => handleUpdateQty(itemId, qty + 1)} className="text-[#3C5040] font-bold"><Plus className="w-4 h-4" strokeWidth={3} /></button>
+                                </div>
+                              )}
+                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}
