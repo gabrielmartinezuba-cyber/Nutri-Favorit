@@ -11,7 +11,6 @@ import { FAVORIT_WHATSAPP } from '@/config/contacto';
 type Tab = 'menu-dia' | 'menu-fijo' | 'promos';
 
 export default function VitalFoodPage() {
-  const supabase = createClient();
   const { items, addItem, updateQuantity } = useCartStore();
   
   const [activeTab, setActiveTab] = useState<Tab>('menu-dia');
@@ -22,22 +21,17 @@ export default function VitalFoodPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let mounted = true;
-
-    // Safety timeout to avoid infinite loading
-    const safetyTimeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 5000);
+    // Create the client INSIDE the effect to avoid stale closures and re-render issues
+    const supabase = createClient();
+    let cancelled = false;
 
     async function loadData() {
+      setLoading(true);
       try {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayString = `${year}-${month}-${day}`;
+        const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         
-        console.log('Fetching VitalFood data for:', todayString);
+        console.log('[VitalFood] Fetching for date:', todayString);
 
         const [menusRes, fixedRes, promosRes] = await Promise.all([
           supabase.from('vitalfood_daily_menus').select('*').eq('menu_date', todayString).eq('status', 'published').maybeSingle(),
@@ -45,16 +39,25 @@ export default function VitalFoodPage() {
           supabase.from('vitalfood_promos').select('*').eq('activo', true)
         ]);
 
-        if (!mounted) return;
+        // If this effect was cleaned up while we were awaiting, don't update state
+        if (cancelled) return;
 
-        if (menusRes.error) console.error('Error fetching today menu:', menusRes.error);
-        if (fixedRes.error) console.error('Error fetching fixed items:', fixedRes.error);
-        if (promosRes.error) console.error('Error fetching promos:', promosRes.error);
-        
+        console.log('[VitalFood] Results:', {
+          menu: menusRes.data ? 'found' : 'none',
+          menuErr: menusRes.error?.message,
+          fixed: fixedRes.data?.length,
+          fixedErr: fixedRes.error?.message,
+          promos: promosRes.data?.length,
+          promosErr: promosRes.error?.message,
+        });
+
+        // --- Daily Menu ---
         if (menusRes.data) {
-          setPostresDiaState(menusRes.data.desserts || []);
+          const desserts = menusRes.data.desserts || [];
+          setPostresDiaState(desserts);
+
           const opts = menusRes.data.options || {};
-          const mapped = [];
+          const mapped: any[] = [];
           if (opts.general?.desc) mapped.push({ id: 'vf-md-gral', name: 'Menú General (Hoy)', description: opts.general.desc, price: opts.general.price, image_url: opts.general.image_url });
           if (opts.keto?.desc) mapped.push({ id: 'vf-md-keto', name: 'Menú Keto (Hoy)', description: opts.keto.desc, price: opts.keto.price, image_url: opts.keto.image_url });
           if (opts.veggie?.desc) mapped.push({ id: 'vf-md-veggie', name: 'Menú Veggie (Hoy)', description: opts.veggie.desc, price: opts.veggie.price, image_url: opts.veggie.image_url });
@@ -65,11 +68,12 @@ export default function VitalFoodPage() {
           setPostresDiaState([]);
         }
         
-        if (fixedRes.data) {
+        // --- Fixed Menu ---
+        if (fixedRes.data && fixedRes.data.length > 0) {
           const groups: Record<string, any[]> = {};
-          for(const item of fixedRes.data) {
+          for (const item of fixedRes.data) {
             const cat = item.category || 'Otros';
-            if(!groups[cat]) groups[cat] = [];
+            if (!groups[cat]) groups[cat] = [];
             groups[cat].push(item);
           }
           setMenuFijoState(Object.keys(groups).map(cat => ({ category: cat, items: groups[cat] })));
@@ -77,25 +81,24 @@ export default function VitalFoodPage() {
           setMenuFijoState([]);
         }
         
-        if (promosRes.data) {
-          setPromosState(promosRes.data);
-        } else {
-          setPromosState([]);
-        }
+        // --- Promos ---
+        setPromosState(promosRes.data || []);
+
       } catch (e) {
-        console.error('CRITICAL: Fatal error loading VitalFood data:', e);
+        if (!cancelled) {
+          console.error('[VitalFood] Fatal error loading data:', e);
+        }
       } finally {
-        if (mounted) {
+        if (!cancelled) {
           setLoading(false);
-          clearTimeout(safetyTimeout);
         }
       }
     }
 
     loadData();
-    return () => { 
-      mounted = false;
-      clearTimeout(safetyTimeout);
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -123,8 +126,8 @@ export default function VitalFoodPage() {
     <div className="pb-32 pt-4 flex flex-col gap-6 bg-[#f8f9f4] min-h-[100dvh] -mt-16 pt-20 -mx-4 px-4">
       {/* Header VitalFood */}
       <div className="flex items-center justify-between bg-white rounded-2xl px-6 h-20 shadow-sm border border-gray-50 flex-shrink-0">
-        <div className="w-[180px] h-full flex items-center justify-center">
-          <img src="/logovitalfood.png" alt="VitalFood Logo" className="w-full h-auto max-h-16 object-contain" />
+        <div className="w-[180px] h-full flex items-center justify-start">
+          <img src="/logovitalfood.png" alt="VitalFood Logo" className="h-full w-auto max-h-16 object-contain object-left" />
         </div>
         <Link href="/tienda/favorit" className="flex items-center gap-2 bg-[#fdfafb] hover:bg-[#f6eef1] transition-colors pl-1 pr-3 py-1 rounded-full border border-gray-100 active:scale-95 shadow-sm">
           <div className="h-7 w-7 flex items-center justify-center bg-[#6B2139] rounded-full drop-shadow-sm">
@@ -162,8 +165,8 @@ export default function VitalFoodPage() {
                   const isKeto = item.id.includes('keto');
                   const isVeggie = item.id.includes('veggie');
                   const isProt = item.id.includes('prot');
-                  let borderColor = isKeto ? 'border-green-500' : isVeggie ? 'border-purple-500' : isProt ? 'border-red-500' : 'border-orange-500';
-                  let lightBg = isKeto ? 'bg-green-50' : isVeggie ? 'bg-purple-50' : isProt ? 'bg-red-50' : 'bg-orange-50';
+                  const borderColor = isKeto ? 'border-green-500' : isVeggie ? 'border-purple-500' : isProt ? 'border-red-500' : 'border-orange-500';
+                  const lightBg = isKeto ? 'bg-green-50' : isVeggie ? 'bg-purple-50' : isProt ? 'bg-red-50' : 'bg-orange-50';
 
                   return (
                     <div key={item.id} className={`bg-white rounded-2xl shadow-sm border-l-4 ${borderColor} border-y border-r border-gray-100 flex flex-col overflow-hidden`}>

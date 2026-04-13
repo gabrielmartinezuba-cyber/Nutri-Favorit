@@ -8,7 +8,7 @@ import { Minus, Plus, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProductDetailModal } from '@/components/home/ProductDetailModal';
 
-const CATEGORIES = ['Todos', 'Viandas', 'Tartas', 'Wraps', 'Pizzas', 'Hamburguesas', 'Desayunos'];
+const CATEGORIES = ['Todos', 'Tartas', 'Wraps', 'Pizzas', 'Hamburguesas', 'Desayunos'];
 
 export function ProductGallery({ initialProducts }: { initialProducts: any[] }) {
   const [activeCategory, setActiveCategory] = React.useState('Todos');
