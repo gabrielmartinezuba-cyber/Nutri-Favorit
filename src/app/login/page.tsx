@@ -28,7 +28,7 @@ export default function LoginPage() {
         
         if (profile) {
           setUser(profile);
-          router.push('/productos');
+          router.push('/tienda/favorit');
         }
         setChecking(false);
       } else {
@@ -114,7 +114,7 @@ export default function LoginPage() {
             </div>
 
             <button 
-              onClick={() => router.push('/productos')}
+              onClick={() => router.push('/tienda/favorit')}
               className="w-full py-4 text-sm font-bold text-gray-400 hover:text-brand-borravino transition-colors flex items-center justify-center gap-2"
             >
                Explorar como invitado <ArrowRight className="w-4 h-4 text-gray-300" />

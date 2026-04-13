@@ -139,7 +139,7 @@ _Pedido generado desde Favorit AI_`;
         <p className="text-gray-400 mt-2 max-w-[280px]">
           Agregá productos desde la tienda o pedile una recomendación a Nutri AI
         </p>
-        <Link href="/productos" className="mt-8 bg-brand-borravino text-white font-bold px-10 py-4 rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-widest text-sm">
+        <Link href="/tienda/favorit" className="mt-8 bg-brand-borravino text-white font-bold px-10 py-4 rounded-2xl shadow-lg active:scale-95 transition-all uppercase tracking-widest text-sm">
           Ir a la Tienda
         </Link>
       </div>

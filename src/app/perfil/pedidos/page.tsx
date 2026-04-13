@@ -101,7 +101,7 @@ export default function PedidosPage() {
             <p className="text-sm text-gray-400 max-w-[240px]">
               Todavía no hiciste ningún pedido. ¡Empezá explorando la tienda!
             </p>
-            <button onClick={() => router.push('/productos')}
+            <button onClick={() => router.push('/tienda/favorit')}
               className="mt-2 bg-brand-verde text-white font-black px-8 py-3.5 rounded-2xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-wider">
               Ir a la Tienda
             </button>

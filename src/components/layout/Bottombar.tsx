@@ -9,7 +9,7 @@ export default function Bottombar() {
 
   const navItems = [
     { label: 'Inicio', icon: Home, href: '/' },
-    { label: 'Tienda', icon: ShoppingBag, href: '/productos' },
+    { label: 'Tienda', icon: ShoppingBag, href: '/tienda/favorit' },
     { label: 'Nutri AI', icon: Sparkles, href: '/chat' },
     { label: 'Salud', icon: HeartPulse, href: '/salud' },
   ];
@@ -19,7 +19,7 @@ export default function Bottombar() {
       <ul className="flex justify-around items-center h-20 px-4">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || (item.href === '/productos' && pathname.startsWith('/tienda'));
+          const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href) || (item.label === 'Tienda' && pathname.startsWith('/tienda'));
           
           return (
             <li key={item.href}>

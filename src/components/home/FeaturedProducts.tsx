@@ -26,7 +26,7 @@ export default function FeaturedProducts({ initialProducts }: { initialProducts:
           <Star className="w-6 h-6 text-brand-mostaza fill-brand-mostaza" />
           Favoritos
         </h2>
-        <Link href="/productos" className="text-xs font-black text-brand-verde flex items-center uppercase tracking-widest bg-brand-verde/5 px-4 py-2 rounded-full border border-brand-verde/10 hover:bg-brand-verde/10 transition-all">
+        <Link href="/tienda/favorit" className="text-xs font-black text-brand-verde flex items-center uppercase tracking-widest bg-brand-verde/5 px-4 py-2 rounded-full border border-brand-verde/10 hover:bg-brand-verde/10 transition-all">
           Ver todo <ArrowRight className="w-4 h-4 ml-1.5" />
         </Link>
       </div>
