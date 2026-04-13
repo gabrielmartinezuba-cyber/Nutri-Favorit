@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useTransition } from 'react';
 import {
   Users, ShoppingBag, Star, Search, TrendingUp,
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
-  Package, Phone, MessageSquare,
+  Package, Phone, MessageSquare, ChevronDown, Loader2,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductsTab, { type Product as CatalogProduct } from './ProductsTab';
 import VitalFoodTab, { type DailyMenu, type FixedItem, type Promo } from './VitalFoodTab';
+import { updateOrderStatus, type OrderStatus } from '@/app/admin/actions/orderActions';
 
 // ── Types ──────────────────────────────────────────────────────
 type Profile = {
@@ -32,6 +33,7 @@ type Order = {
   status: string | null;
   created_at: string;
   user_id: string | null;
+  points_awarded?: boolean;
 };
 
 type Stats = {
@@ -48,13 +50,23 @@ type VitalFoodData = {
   promos: Promo[];
 };
 
-// ── Helpers ────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending:   { label: 'Pendiente',  color: 'text-[#E8B63E] bg-[#E8B63E]/10 border-[#E8B63E]/30',  icon: <Clock className="w-3 h-3" /> },
-  confirmed: { label: 'Confirmado', color: 'text-[#2C5E4C] bg-[#2C5E4C]/10 border-[#2C5E4C]/30',  icon: <CheckCircle className="w-3 h-3" /> },
-  delivered: { label: 'Entregado',  color: 'text-blue-400 bg-blue-400/10 border-blue-400/30',      icon: <CheckCircle className="w-3 h-3" /> },
-  cancelled: { label: 'Cancelado',  color: 'text-red-400 bg-red-400/10 border-red-400/30',         icon: <XCircle className="w-3 h-3" /> },
+// ── Status Config ──────────────────────────────────────────────
+export const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  pendiente:       { label: 'Pendiente',      color: 'text-[#E8B63E] bg-[#E8B63E]/10 border-[#E8B63E]/30',  icon: <Clock className="w-3 h-3" /> },
+  pending:         { label: 'Pendiente',      color: 'text-[#E8B63E] bg-[#E8B63E]/10 border-[#E8B63E]/30',  icon: <Clock className="w-3 h-3" /> },
+  en_preparacion:  { label: 'En Preparación', color: 'text-orange-500 bg-orange-500/10 border-orange-500/30', icon: <Package className="w-3 h-3" /> },
+  entregado:       { label: 'Entregado',      color: 'text-emerald-600 bg-emerald-600/10 border-emerald-600/30', icon: <CheckCircle className="w-3 h-3" /> },
+  delivered:       { label: 'Entregado',      color: 'text-emerald-600 bg-emerald-600/10 border-emerald-600/30', icon: <CheckCircle className="w-3 h-3" /> },
+  cancelado:       { label: 'Cancelado',      color: 'text-red-500 bg-red-500/10 border-red-500/30',         icon: <XCircle className="w-3 h-3" /> },
+  cancelled:       { label: 'Cancelado',      color: 'text-red-500 bg-red-500/10 border-red-500/30',         icon: <XCircle className="w-3 h-3" /> },
 };
+
+const STATUS_OPTIONS: { value: OrderStatus; label: string; color: string }[] = [
+  { value: 'pendiente',      label: '⏳ Pendiente',      color: 'text-[#E8B63E]'   },
+  { value: 'en_preparacion', label: '🔥 En Preparación', color: 'text-orange-500'  },
+  { value: 'entregado',      label: '✅ Entregado',      color: 'text-emerald-600' },
+  { value: 'cancelado',      label: '❌ Cancelado',      color: 'text-red-500'     },
+];
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
@@ -65,6 +77,23 @@ function formatDate(iso: string) {
 function formatCurrency(n: number | null) {
   if (!n) return '$0';
   return `$${n.toLocaleString('es-AR')}`;
+}
+
+// ── Toast ──────────────────────────────────────────────────────
+function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-2xl shadow-xl font-bold text-sm text-white flex items-center gap-2 ${
+        type === 'success' ? 'bg-emerald-600' : 'bg-red-500'
+      }`}
+    >
+      {type === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+      {message}
+    </motion.div>
+  );
 }
 
 // ── Stat Card ──────────────────────────────────────────────────
@@ -84,7 +113,7 @@ function StatCard({ icon, label, value, accent }: {
 
 // ── Main Dashboard ─────────────────────────────────────────────
 export default function AdminDashboardClient({
-  adminName, profiles, orders, products, stats, vitalFoodData,
+  adminName, profiles, orders: initialOrders, products, stats, vitalFoodData,
 }: {
   adminName: string;
   profiles: Profile[];
@@ -96,15 +125,47 @@ export default function AdminDashboardClient({
   const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos'>('metricas');
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/admin/login');
   };
 
-  // Filtrado de clientes
+  const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
+    // Optimistically update local state
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+
+    const result = await updateOrderStatus(
+      order.id,
+      newStatus,
+      order.total_price ?? 0,
+      order.user_id,
+      order.points_awarded ?? false
+    );
+
+    if (result.success) {
+      const pointsMsg = newStatus === 'entregado' && !order.points_awarded && (order.total_price ?? 0) >= 1000
+        ? ` • +${Math.floor((order.total_price ?? 0) / 1000)} pts otorgados`
+        : '';
+      showToast(`Estado actualizado${pointsMsg}`, 'success');
+      router.refresh();
+    } else {
+      // Revert on error
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: order.status } : o));
+      showToast('Error al actualizar el estado', 'error');
+    }
+  };
+
+  // Filtered lists
   const filteredProfiles = useMemo(() => {
     const q = search.toLowerCase();
     return profiles.filter(p =>
@@ -113,7 +174,6 @@ export default function AdminDashboardClient({
     );
   }, [profiles, search]);
 
-  // Filtrado de pedidos
   const filteredOrders = useMemo(() => {
     const q = search.toLowerCase();
     return orders.filter(o =>
@@ -131,17 +191,11 @@ export default function AdminDashboardClient({
           <img src="/logofav.png" alt="Favorit Logo" className="h-full w-auto object-contain brightness-0 invert" />
           <div className="h-6 w-[1.5px] bg-white/40 rounded-full" />
           <div className="h-full flex items-center">
-            <img 
-              src="/logovitalfood.png" 
-              alt="Vital Food Logo" 
-              className="h-[140%] w-auto object-contain brightness-0 invert -ml-1" 
-            />
+            <img src="/logovitalfood.png" alt="Vital Food Logo" className="h-[140%] w-auto object-contain brightness-0 invert -ml-1" />
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <h1 className="text-xs font-heading font-bold text-white/90 tracking-wide">
-            Panel Admin
-          </h1>
+          <h1 className="text-xs font-heading font-bold text-white/90 tracking-wide">Panel Admin</h1>
           <button
             id="admin-logout-btn"
             onClick={handleLogout}
@@ -154,7 +208,6 @@ export default function AdminDashboardClient({
       </div>
 
       <div className="px-5 pt-6 pb-24 flex flex-col gap-6">
-
         <AnimatePresence mode="popLayout">
           {/* ── Vista: Métricas ── */}
           {activeTab === 'metricas' && (
@@ -166,30 +219,10 @@ export default function AdminDashboardClient({
               transition={{ duration: 0.2 }}
               className="grid grid-cols-2 gap-3"
             >
-              <StatCard
-                icon={<ShoppingBag className="w-5 h-5 text-[#E8B63E]" />}
-                label="Pedidos totales"
-                value={stats.totalOrdenes}
-                accent="bg-[#E8B63E]/5 border-[#E8B63E]/15"
-              />
-              <StatCard
-                icon={<Clock className="w-5 h-5 text-orange-400" />}
-                label="Pendientes"
-                value={stats.ordenesPendientes}
-                accent="bg-orange-400/5 border-orange-400/15"
-              />
-              <StatCard
-                icon={<Users className="w-5 h-5 text-[#2C5E4C]" />}
-                label="Clientes"
-                value={stats.totalClientes}
-                accent="bg-[#2C5E4C]/10 border-[#2C5E4C]/20"
-              />
-              <StatCard
-                icon={<Star className="w-5 h-5 text-[#6B2139]" />}
-                label="Puntos otorgados"
-                value={stats.totalPuntos.toLocaleString('es-AR')}
-                accent="bg-[#6B2139]/10 border-[#6B2139]/20"
-              />
+              <StatCard icon={<ShoppingBag className="w-5 h-5 text-[#E8B63E]" />} label="Pedidos totales" value={stats.totalOrdenes} accent="bg-[#E8B63E]/5 border-[#E8B63E]/15" />
+              <StatCard icon={<Clock className="w-5 h-5 text-orange-400" />} label="Pendientes" value={stats.ordenesPendientes} accent="bg-orange-400/5 border-orange-400/15" />
+              <StatCard icon={<Users className="w-5 h-5 text-[#2C5E4C]" />} label="Clientes" value={stats.totalClientes} accent="bg-[#2C5E4C]/10 border-[#2C5E4C]/20" />
+              <StatCard icon={<Star className="w-5 h-5 text-[#6B2139]" />} label="Puntos otorgados" value={stats.totalPuntos.toLocaleString('es-AR')} accent="bg-[#6B2139]/10 border-[#6B2139]/20" />
             </motion.div>
           )}
 
@@ -201,7 +234,7 @@ export default function AdminDashboardClient({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-6"
+              className="flex flex-col gap-4"
             >
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -217,12 +250,15 @@ export default function AdminDashboardClient({
 
               <div className="flex flex-col gap-3">
                 {filteredOrders.length === 0 ? (
-                  <EmptyState
-                    icon={<ShoppingBag className="w-8 h-8 text-white/20" />}
-                    message={search ? 'Sin resultados para tu búsqueda' : 'Todavía no hay pedidos registrados'}
-                  />
+                  <EmptyState icon={<ShoppingBag className="w-8 h-8 text-white/20" />} message={search ? 'Sin resultados para tu búsqueda' : 'Todavía no hay pedidos registrados'} />
                 ) : (
-                  filteredOrders.map(order => <OrderCard key={order.id} order={order} />)
+                  filteredOrders.map(order => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onStatusChange={handleStatusChange}
+                    />
+                  ))
                 )}
               </div>
             </motion.div>
@@ -249,13 +285,9 @@ export default function AdminDashboardClient({
                   className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
                 />
               </div>
-
               <div className="flex flex-col gap-3">
                 {filteredProfiles.length === 0 ? (
-                  <EmptyState
-                    icon={<Users className="w-8 h-8 text-white/20" />}
-                    message={search ? 'Sin resultados para tu búsqueda' : 'Todavía no hay clientes registrados'}
-                  />
+                  <EmptyState icon={<Users className="w-8 h-8 text-white/20" />} message={search ? 'Sin resultados para tu búsqueda' : 'Todavía no hay clientes registrados'} />
                 ) : (
                   filteredProfiles.map(profile => <ClientCard key={profile.id} profile={profile} />)
                 )}
@@ -276,18 +308,14 @@ export default function AdminDashboardClient({
               <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100">
                 <button
                   onClick={() => setCatalogSubTab('favorit')}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${
-                    catalogSubTab === 'favorit' ? 'bg-[#8F3A44] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'
-                  }`}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${catalogSubTab === 'favorit' ? 'bg-[#8F3A44] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}
                 >
                   <img src="/logofav.png" className={`h-4 object-contain ${catalogSubTab !== 'favorit' && 'grayscale filter opacity-50'}`} alt="" />
                   Favorit
                 </button>
                 <button
                   onClick={() => setCatalogSubTab('vitalfood')}
-                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${
-                    catalogSubTab === 'vitalfood' ? 'bg-[#3C5040] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'
-                  }`}
+                  className={`flex-1 py-2 rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${catalogSubTab === 'vitalfood' ? 'bg-[#3C5040] text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50'}`}
                 >
                   <img src="/logovitalfood.png" className={`h-4 object-contain ${catalogSubTab !== 'vitalfood' && 'grayscale filter opacity-50'}`} alt="" />
                   VitalFood
@@ -304,34 +332,18 @@ export default function AdminDashboardClient({
         </AnimatePresence>
       </div>
 
+      {/* ── Toast ── */}
+      <AnimatePresence>
+        {toast && <Toast key="toast" message={toast.message} type={toast.type} />}
+      </AnimatePresence>
+
       {/* ── Bottombar Admin ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-2 py-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
         <div className="flex items-center justify-around max-w-md mx-auto">
-          <BottomTab
-            icon={<TrendingUp className="w-5 h-5" />}
-            label="Métricas"
-            active={activeTab === 'metricas'}
-            onClick={() => { setSearch(''); setActiveTab('metricas'); }}
-          />
-          <BottomTab
-            icon={<ShoppingBag className="w-5 h-5" />}
-            label="Pedidos"
-            active={activeTab === 'pedidos'}
-            badge={stats.ordenesPendientes}
-            onClick={() => { setSearch(''); setActiveTab('pedidos'); }}
-          />
-          <BottomTab
-            icon={<Users className="w-5 h-5" />}
-            label="Clientes"
-            active={activeTab === 'clientes'}
-            onClick={() => { setSearch(''); setActiveTab('clientes'); }}
-          />
-          <BottomTab
-            icon={<Package className="w-5 h-5" />}
-            label="Catálogo"
-            active={activeTab === 'productos'}
-            onClick={() => { setSearch(''); setActiveTab('productos'); }}
-          />
+          <BottomTab icon={<TrendingUp className="w-5 h-5" />} label="Métricas" active={activeTab === 'metricas'} onClick={() => { setSearch(''); setActiveTab('metricas'); }} />
+          <BottomTab icon={<ShoppingBag className="w-5 h-5" />} label="Pedidos" active={activeTab === 'pedidos'} badge={stats.ordenesPendientes} onClick={() => { setSearch(''); setActiveTab('pedidos'); }} />
+          <BottomTab icon={<Users className="w-5 h-5" />} label="Clientes" active={activeTab === 'clientes'} onClick={() => { setSearch(''); setActiveTab('clientes'); }} />
+          <BottomTab icon={<Package className="w-5 h-5" />} label="Catálogo" active={activeTab === 'productos'} onClick={() => { setSearch(''); setActiveTab('productos'); }} />
         </div>
       </div>
     </div>
@@ -339,14 +351,21 @@ export default function AdminDashboardClient({
 }
 
 // ── Order Card ─────────────────────────────────────────────────
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onStatusChange }: {
+  order: Order;
+  onStatusChange: (order: Order, status: OrderStatus) => Promise<void>;
+}) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = STATUS_CONFIG[order.status ?? 'pending'] ?? STATUS_CONFIG.pending;
+  const [updating, setUpdating] = useState(false);
+  const cfg = STATUS_CONFIG[order.status ?? 'pendiente'] ?? STATUS_CONFIG.pendiente;
   const items: OrderItem[] = Array.isArray(order.items) ? order.items : [];
+  const waLink = order.customer_phone ? `https://wa.me/${order.customer_phone.replace(/\D/g, '')}` : null;
 
-  const waLink = order.customer_phone
-    ? `https://wa.me/${order.customer_phone.replace(/\D/g, '')}`
-    : null;
+  const handleChange = async (newStatus: OrderStatus) => {
+    setUpdating(true);
+    await onStatusChange(order, newStatus);
+    setUpdating(false);
+  };
 
   return (
     <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
@@ -356,13 +375,18 @@ function OrderCard({ order }: { order: Order }) {
         className="w-full flex items-center justify-between px-4 py-4 text-left hover:bg-gray-50/50 transition-colors"
       >
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-gray-900 text-[15px]">
               {order.customer_name ?? 'Cliente anónimo'}
             </span>
             <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${cfg.color}`}>
               {cfg.icon} {cfg.label}
             </span>
+            {order.points_awarded && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8B63E]/10 text-[#E8B63E] border border-[#E8B63E]/30">
+                <Star className="w-2.5 h-2.5 fill-current" /> Pts
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3 text-[12px] text-gray-400">
             <span className="font-mono">{order.id.slice(0, 8)}…</span>
@@ -370,9 +394,7 @@ function OrderCard({ order }: { order: Order }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[#3C5040] font-bold font-heading">
-            {formatCurrency(order.total_price)}
-          </span>
+          <span className="text-[#3C5040] font-bold font-heading">{formatCurrency(order.total_price)}</span>
           <ChevronRight className={`w-4 h-4 text-gray-300 transition-transform ${expanded ? 'rotate-90' : ''}`} />
         </div>
       </button>
@@ -394,6 +416,28 @@ function OrderCard({ order }: { order: Order }) {
               ))}
             </div>
           )}
+
+          {/* Status Changer */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Cambiar estado</p>
+            <div className="relative">
+              {updating && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                </div>
+              )}
+              <select
+                value={order.status ?? 'pendiente'}
+                onChange={e => handleChange(e.target.value as OrderStatus)}
+                disabled={updating}
+                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#3C5040] disabled:opacity-60 shadow-sm appearance-none cursor-pointer"
+              >
+                {STATUS_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           {/* Actions */}
           {order.customer_phone && (
@@ -427,42 +471,27 @@ function ClientCard({ profile }: { profile: Profile }) {
   const initials = profile.first_name
     ? profile.first_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     : '??';
-
   const points = profile.favorit_points ?? 0;
-  // Nivel basado en puntos
   const level = points >= 500 ? { label: 'Gold', color: 'text-[#E8B63E]' }
     : points >= 200 ? { label: 'Silver', color: 'text-slate-400' }
     : { label: 'Starter', color: 'text-gray-400' };
 
   return (
     <div className="bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-4 flex items-center gap-4">
-      {/* Avatar */}
       <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3C5040] to-[#2C5E4C] flex items-center justify-center font-heading font-bold text-white text-sm flex-shrink-0 shadow-md">
         {initials}
       </div>
-
-      {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 text-[15px] truncate">
-          {profile.first_name ?? 'Sin nombre'}
-        </p>
-        <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5">
-          ID: {profile.id.slice(0, 12)}…
-        </p>
-        <p className="text-[11px] text-gray-400 mt-0.5 font-medium">
-          Desde {formatDate(profile.created_at)}
-        </p>
+        <p className="font-semibold text-gray-900 text-[15px] truncate">{profile.first_name ?? 'Sin nombre'}</p>
+        <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5">ID: {profile.id.slice(0, 12)}…</p>
+        <p className="text-[11px] text-gray-400 mt-0.5 font-medium">Desde {formatDate(profile.created_at)}</p>
       </div>
-
-      {/* Points */}
       <div className="flex flex-col items-end flex-shrink-0">
         <div className="flex items-center gap-1">
           <Star className="w-3.5 h-3.5 fill-[#E8B63E] text-[#E8B63E]" />
           <span className="font-heading font-bold text-gray-900">{points.toLocaleString('es-AR')}</span>
         </div>
-        <span className={`text-[11px] font-semibold mt-0.5 ${level.color}`}>
-          {level.label}
-        </span>
+        <span className={`text-[11px] font-semibold mt-0.5 ${level.color}`}>{level.label}</span>
       </div>
     </div>
   );
@@ -479,17 +508,13 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
 }
 
 // ── Bottom Tab Helper ──────────────────────────────────────────
-function BottomTab({ 
-  icon, label, active, onClick, badge 
-}: { 
-  icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number 
+function BottomTab({ icon, label, active, onClick, badge }: {
+  icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badge?: number;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-1.5 p-2 transition-colors ${
-        active ? 'text-brand-borravino' : 'text-gray-400 hover:text-gray-600'
-      }`}
+      className={`relative flex flex-col items-center gap-1.5 p-2 transition-colors ${active ? 'text-brand-borravino' : 'text-gray-400 hover:text-gray-600'}`}
     >
       <div className="relative">
         {icon}
@@ -501,10 +526,10 @@ function BottomTab({
       </div>
       <span className="text-[10px] font-medium tracking-wide">{label}</span>
       {active && (
-         <motion.div
-           layoutId="adminBottomNavIndicator"
-           className="absolute -top-[12px] left-1/2 -translate-x-1/2 w-8 h-[3px] bg-brand-borravino rounded-b-full shadow-sm"
-         />
+        <motion.div
+          layoutId="adminBottomNavIndicator"
+          className="absolute -top-[12px] left-1/2 -translate-x-1/2 w-8 h-[3px] bg-brand-borravino rounded-b-full shadow-sm"
+        />
       )}
     </button>
   );

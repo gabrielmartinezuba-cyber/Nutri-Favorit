@@ -24,7 +24,7 @@ export default async function AdminPage() {
 
   const [profilesRes, ordersRes, productsRes, vfMenusRes, vfFixedRes, vfPromosRes] = await Promise.all([
     adminClient.from('profiles').select('*').order('favorit_points', { ascending: false }),
-    adminClient.from('orders').select('*').order('created_at', { ascending: false }).limit(50),
+    adminClient.from('orders').select('*, points_awarded').order('created_at', { ascending: false }).limit(50),
     adminClient.from('products').select('*').order('created_at', { ascending: false }),
     adminClient.from('vitalfood_daily_menus').select('*').order('menu_date', { ascending: false }).limit(7),
     adminClient.from('vitalfood_fixed_items').select('*').order('created_at', { ascending: false }),
@@ -60,7 +60,7 @@ export default async function AdminPage() {
       stats={{
         totalClientes: profiles.filter(p => p.role === 'cliente').length,
         totalPuntos: profiles.reduce((acc, p) => acc + (p.favorit_points ?? 0), 0),
-        ordenesPendientes: orders.filter(o => o.status === 'pending').length,
+        ordenesPendientes: orders.filter(o => o.status === 'pending' || o.status === 'pendiente' || o.status === 'en_preparacion').length,
         totalOrdenes: orders.length,
         totalProductos: products.length,
       }}
