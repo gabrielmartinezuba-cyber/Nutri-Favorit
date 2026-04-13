@@ -5,6 +5,7 @@ import {
   Users, ShoppingBag, Star, Search, TrendingUp,
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
   Package, Phone, MessageSquare, ChevronDown, Loader2,
+  CircleDollarSign, Calendar,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -144,11 +145,13 @@ export default function AdminDashboardClient({
   stats: Stats;
   vitalFoodData: VitalFoodData;
 }) {
-  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'clientes' | 'productos'>('metricas');
+  const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'ventas' | 'clientes' | 'productos'>('metricas');
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('todos');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [activeAccordionOpen, setActiveAccordionOpen] = useState(true);
   const [doneAccordionOpen, setDoneAccordionOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -202,17 +205,51 @@ export default function AdminDashboardClient({
   const filteredOrders = useMemo(() => {
     const q = search.toLowerCase();
     return orders.filter(o =>
-      isWithin(o.created_at, timeFilter) &&
-      (
-        !q ||
-        (o.customer_name?.toLowerCase().includes(q) || false) ||
-        (o.customer_phone?.toLowerCase().includes(q) || false)
-      )
+      !q ||
+      (o.customer_name?.toLowerCase().includes(q) || false) ||
+      (o.customer_phone?.toLowerCase().includes(q) || false)
     );
-  }, [orders, search, timeFilter]);
+  }, [orders, search]);
 
-  const activeOrders = filteredOrders.filter(o => ACTIVE_STATUSES_ADMIN.has(o.status ?? ''));
-  const doneOrders   = filteredOrders.filter(o => DONE_STATUSES_ADMIN.has(o.status ?? ''));
+  const activeOrders = useMemo(() => 
+    filteredOrders.filter(o => ACTIVE_STATUSES_ADMIN.has(o.status ?? '')),
+    [filteredOrders]
+  );
+
+  const salesOrders = useMemo(() => {
+    return orders.filter(o => {
+      // Basic match for status and search
+      const q = search.toLowerCase();
+      const statusMatch = DONE_STATUSES_ADMIN.has(o.status ?? '');
+      const searchMatch = !q || 
+        (o.customer_name?.toLowerCase().includes(q) || false) ||
+        (o.customer_phone?.toLowerCase().includes(q) || false);
+      
+      if (!statusMatch || !searchMatch) return false;
+
+      // Date filtering
+      if (startDate || endDate) {
+        const d = new Date(o.created_at);
+        d.setHours(0, 0, 0, 0);
+        
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          if (d < start) return false;
+        }
+        
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(0, 0, 0, 0);
+          if (d > end) return false;
+        }
+        
+        return true;
+      }
+
+      return isWithin(o.created_at, timeFilter);
+    });
+  }, [orders, search, timeFilter, startDate, endDate]);
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
@@ -257,7 +294,7 @@ export default function AdminDashboardClient({
             </motion.div>
           )}
 
-          {/* ── Vista: Pedidos ── */}
+          {/* ── Vista: Pedidos Activos (Operativa) ── */}
           {activeTab === 'pedidos' && (
             <motion.div
               key="pedidos"
@@ -265,8 +302,13 @@ export default function AdminDashboardClient({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-5"
             >
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Pedidos Activos</h2>
+                <p className="text-xs text-gray-500 font-medium">Gestión de cocina y entregas pendientes</p>
+              </div>
+
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -280,44 +322,113 @@ export default function AdminDashboardClient({
                 />
               </div>
 
-              {/* Time filter pills */}
-              <div className="flex gap-2">
-                {TIME_FILTERS.map(f => (
-                  <button
-                    key={f.value}
-                    onClick={() => setTimeFilter(f.value)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                      timeFilter === f.value
-                        ? 'bg-[#3C5040] text-white border-[#3C5040] shadow-sm'
-                        : 'bg-white text-gray-500 border-gray-200 hover:border-[#3C5040]/40'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-3">
+                {activeOrders.length === 0 ? (
+                  <EmptyState icon={<ShoppingBag className="w-8 h-8 text-white/20" />} message={search ? 'Sin resultados para tu búsqueda' : 'No hay pedidos activos en este momento'} />
+                ) : (
+                  activeOrders.map(order => (
+                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} />
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Vista: Ventas (Historial) ── */}
+          {activeTab === 'ventas' && (
+            <motion.div
+              key="ventas"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col gap-5"
+            >
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Historial de Ventas</h2>
+                <p className="text-xs text-gray-500 font-medium">Registro de entregas y cancelaciones</p>
               </div>
 
-              {/* Active accordion */}
-              <AdminAccordion
-                title="Pedidos activos"
-                orders={activeOrders}
-                open={activeAccordionOpen}
-                onToggle={() => setActiveAccordionOpen(p => !p)}
-                accentColor="text-orange-500"
-                emptyMsg="Sin pedidos activos en este período."
-                onStatusChange={handleStatusChange}
-              />
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  id="admin-search-ventas"
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar venta por cliente o ID…"
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
+                />
+              </div>
 
-              {/* Done accordion */}
-              <AdminAccordion
-                title="Pedidos finalizados"
-                orders={doneOrders}
-                open={doneAccordionOpen}
-                onToggle={() => setDoneAccordionOpen(p => !p)}
-                accentColor="text-gray-400"
-                emptyMsg="Sin pedidos finalizados en este período."
-                onStatusChange={handleStatusChange}
-              />
+              {/* Filters Box */}
+              <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-4 flex flex-col gap-4">
+                {/* Time filter pills */}
+                <div className="flex gap-2">
+                  {TIME_FILTERS.map(f => (
+                    <button
+                      key={f.value}
+                      onClick={() => {
+                        setTimeFilter(f.value);
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        timeFilter === f.value && !startDate && !endDate
+                          ? 'bg-[#3C5040] text-white border-[#3C5040] shadow-sm'
+                          : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Date range picker */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">
+                    <Calendar className="w-3 h-3" /> Rango Personalizado
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">DESDE</span>
+                      <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => {
+                          setStartDate(e.target.value);
+                          setTimeFilter('todos');
+                        }}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">HASTA</span>
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => {
+                          setEndDate(e.target.value);
+                          setTimeFilter('todos');
+                        }}
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sales List (Flat) */}
+              <div className="flex flex-col gap-3">
+                {salesOrders.length === 0 ? (
+                  <EmptyState icon={<TrendingUp className="w-8 h-8 text-white/20" />} message="No se encontraron ventas para este período" />
+                ) : (
+                  salesOrders.map(order => (
+                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} />
+                  ))
+                )}
+              </div>
             </motion.div>
           )}
 
@@ -396,9 +507,10 @@ export default function AdminDashboardClient({
 
       {/* ── Bottombar Admin ── */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-2 py-3 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
-        <div className="flex items-center justify-around max-w-md mx-auto">
+        <div className="flex items-center justify-around max-w-lg mx-auto">
           <BottomTab icon={<TrendingUp className="w-5 h-5" />} label="Métricas" active={activeTab === 'metricas'} onClick={() => { setSearch(''); setActiveTab('metricas'); }} />
           <BottomTab icon={<ShoppingBag className="w-5 h-5" />} label="Pedidos" active={activeTab === 'pedidos'} badge={stats.ordenesPendientes} onClick={() => { setSearch(''); setActiveTab('pedidos'); }} />
+          <BottomTab icon={<CircleDollarSign className="w-5 h-5" />} label="Ventas" active={activeTab === 'ventas'} onClick={() => { setSearch(''); setActiveTab('ventas'); }} />
           <BottomTab icon={<Users className="w-5 h-5" />} label="Clientes" active={activeTab === 'clientes'} onClick={() => { setSearch(''); setActiveTab('clientes'); }} />
           <BottomTab icon={<Package className="w-5 h-5" />} label="Catálogo" active={activeTab === 'productos'} onClick={() => { setSearch(''); setActiveTab('productos'); }} />
         </div>
