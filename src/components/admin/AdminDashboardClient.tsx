@@ -5,7 +5,7 @@ import {
   Users, ShoppingBag, Star, Search, TrendingUp,
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
   Package, Phone, MessageSquare, ChevronDown, Loader2,
-  CircleDollarSign, Calendar,
+  CircleDollarSign, Calendar, BarChart2, Award, Wallet, Ticket,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -134,6 +134,25 @@ function StatCard({ icon, label, value, accent }: {
   );
 }
 
+// ── Analytic Card (for Métricas tab) ──────────────────────────
+function AnalyticCard({ icon, label, value, accent, iconColor, sub }: {
+  icon: React.ReactNode; label: string; value: string | number;
+  accent: string; iconColor: string; sub: string;
+}) {
+  return (
+    <div className={`rounded-2xl border bg-gradient-to-b ${accent} shadow-sm p-4 flex flex-col gap-2`}>
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm ${iconColor}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest">{label}</p>
+        <p className="text-xl font-heading font-black text-gray-900 mt-0.5 leading-tight">{value}</p>
+        <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────
 export default function AdminDashboardClient({
   adminName, profiles, orders: initialOrders, products, stats, vitalFoodData,
@@ -154,6 +173,10 @@ export default function AdminDashboardClient({
   const [endDate, setEndDate] = useState('');
   const [activeAccordionOpen, setActiveAccordionOpen] = useState(true);
   const [doneAccordionOpen, setDoneAccordionOpen] = useState(false);
+  const [metricsSubTab, setMetricsSubTab] = useState<'ingresos' | 'productos' | 'clientes'>('ingresos');
+  const [mTimeFilter, setMTimeFilter] = useState<TimeFilter>('todos');
+  const [mStartDate, setMStartDate] = useState('');
+  const [mEndDate, setMEndDate] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -251,6 +274,56 @@ export default function AdminDashboardClient({
     });
   }, [orders, search, timeFilter, startDate, endDate]);
 
+  // ── Metrics computations ───────────────────────────────────────
+  const metricOrders = useMemo(() => {
+    return orders.filter(o => {
+      const delivered = o.status === 'entregado' || o.status === 'delivered';
+      if (!delivered) return false;
+      if (mStartDate || mEndDate) {
+        const d = new Date(o.created_at); d.setHours(0,0,0,0);
+        if (mStartDate) { const s = new Date(mStartDate); s.setHours(0,0,0,0); if (d < s) return false; }
+        if (mEndDate)   { const e = new Date(mEndDate);   e.setHours(0,0,0,0); if (d > e) return false; }
+        return true;
+      }
+      return isWithin(o.created_at, mTimeFilter);
+    });
+  }, [orders, mTimeFilter, mStartDate, mEndDate]);
+
+  const ingresosData = useMemo(() => {
+    const total  = metricOrders.reduce((a, o) => a + (o.total_price ?? 0), 0);
+    const count  = metricOrders.length;
+    const avg    = count > 0 ? total / count : 0;
+    const puntos = metricOrders
+      .filter(o => o.points_awarded)
+      .reduce((a, o) => a + Math.floor((o.total_price ?? 0) / 1000), 0);
+    return { total, count, avg, puntos };
+  }, [metricOrders]);
+
+  type ProductRank = { name: string; cantidad: number; monto: number };
+  const productRanking = useMemo((): ProductRank[] => {
+    const map: Record<string, ProductRank> = {};
+    for (const o of metricOrders) {
+      for (const item of (Array.isArray(o.items) ? o.items : [])) {
+        if (!map[item.name]) map[item.name] = { name: item.name, cantidad: 0, monto: 0 };
+        map[item.name].cantidad += item.quantity;
+        map[item.name].monto   += item.price * item.quantity;
+      }
+    }
+    return Object.values(map).sort((a, b) => b.monto - a.monto);
+  }, [metricOrders]);
+
+  type ClientRank = { name: string; total: number; pedidos: number };
+  const clientRanking = useMemo((): ClientRank[] => {
+    const map: Record<string, ClientRank> = {};
+    for (const o of metricOrders) {
+      const key = o.customer_name ?? 'Anónimo';
+      if (!map[key]) map[key] = { name: key, total: 0, pedidos: 0 };
+      map[key].total   += o.total_price ?? 0;
+      map[key].pedidos += 1;
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [metricOrders]);
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
       {/* ── Header ── */}
@@ -277,20 +350,175 @@ export default function AdminDashboardClient({
 
       <div className="px-5 pt-6 pb-24 flex flex-col gap-6">
         <AnimatePresence mode="popLayout">
-          {/* ── Vista: Métricas ── */}
+          {/* ── Vista: Métricas (Analytics) ── */}
           {activeTab === 'metricas' && (
             <motion.div
               key="metricas"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="grid grid-cols-2 gap-3"
+              className="flex flex-col gap-5"
             >
-              <StatCard icon={<ShoppingBag className="w-5 h-5 text-[#E8B63E]" />} label="Pedidos totales" value={stats.totalOrdenes} accent="bg-[#E8B63E]/5 border-[#E8B63E]/15" />
-              <StatCard icon={<Clock className="w-5 h-5 text-orange-400" />} label="Pendientes" value={stats.ordenesPendientes} accent="bg-orange-400/5 border-orange-400/15" />
-              <StatCard icon={<Users className="w-5 h-5 text-[#2C5E4C]" />} label="Clientes" value={stats.totalClientes} accent="bg-[#2C5E4C]/10 border-[#2C5E4C]/20" />
-              <StatCard icon={<Star className="w-5 h-5 text-[#6B2139]" />} label="Puntos otorgados" value={stats.totalPuntos.toLocaleString('es-AR')} accent="bg-[#6B2139]/10 border-[#6B2139]/20" />
+              {/* Title */}
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Analytics</h2>
+                <p className="text-xs text-gray-500 font-medium">Resumen del negocio basado en entregas</p>
+              </div>
+
+              {/* Sub-tabs pills */}
+              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-gray-100 gap-1">
+                {([
+                  { key: 'ingresos',  label: 'Ingresos',  icon: <Wallet className="w-3.5 h-3.5" /> },
+                  { key: 'productos', label: 'Productos', icon: <BarChart2 className="w-3.5 h-3.5" /> },
+                  { key: 'clientes',  label: 'Clientes',  icon: <Award className="w-3.5 h-3.5" /> },
+                ] as const).map(t => (
+                  <button
+                    key={t.key}
+                    onClick={() => setMetricsSubTab(t.key)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                      metricsSubTab === t.key
+                        ? 'bg-[#3C5040] text-white shadow-sm'
+                        : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                  >
+                    {t.icon} {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Global date filter */}
+              <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-4 flex flex-col gap-3">
+                <div className="flex gap-2">
+                  {TIME_FILTERS.map(f => (
+                    <button
+                      key={f.value}
+                      onClick={() => { setMTimeFilter(f.value); setMStartDate(''); setMEndDate(''); }}
+                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        mTimeFilter === f.value && !mStartDate && !mEndDate
+                          ? 'bg-[#3C5040] text-white border-[#3C5040] shadow-sm'
+                          : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">DESDE</span>
+                    <input type="date" value={mStartDate}
+                      onChange={e => { setMStartDate(e.target.value); setMTimeFilter('todos'); }}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
+                    />
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">HASTA</span>
+                    <input type="date" value={mEndDate}
+                      onChange={e => { setMEndDate(e.target.value); setMTimeFilter('todos'); }}
+                      className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── TAB: INGRESOS ── */}
+              {metricsSubTab === 'ingresos' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <AnalyticCard
+                    icon={<CircleDollarSign className="w-5 h-5" />}
+                    label="Ingreso Total"
+                    value={formatCurrency(ingresosData.total)}
+                    accent="from-emerald-50 to-white border-emerald-100"
+                    iconColor="text-emerald-600"
+                    sub={`${ingresosData.count} pedido${ingresosData.count !== 1 ? 's' : ''}`}
+                  />
+                  <AnalyticCard
+                    icon={<Ticket className="w-5 h-5" />}
+                    label="Ticket Promedio"
+                    value={formatCurrency(ingresosData.avg)}
+                    accent="from-blue-50 to-white border-blue-100"
+                    iconColor="text-blue-500"
+                    sub="por pedido entregado"
+                  />
+                  <AnalyticCard
+                    icon={<ShoppingBag className="w-5 h-5" />}
+                    label="Total Pedidos"
+                    value={ingresosData.count}
+                    accent="from-[#E8B63E]/10 to-white border-[#E8B63E]/20"
+                    iconColor="text-[#E8B63E]"
+                    sub="entregados"
+                  />
+                  <AnalyticCard
+                    icon={<Star className="w-5 h-5" />}
+                    label="Puntos Otorgados"
+                    value={ingresosData.puntos.toLocaleString('es-AR')}
+                    accent="from-[#6B2139]/5 to-white border-[#6B2139]/15"
+                    iconColor="text-[#6B2139]"
+                    sub="a clientes fieles"
+                  />
+                </div>
+              )}
+
+              {/* ── TAB: PRODUCTOS ── */}
+              {metricsSubTab === 'productos' && (
+                <div className="flex flex-col gap-3">
+                  {productRanking.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-10 italic">Sin datos para este período.</p>
+                  ) : (
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      {/* Header */}
+                      <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Producto</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-20 text-right">Monto $</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-12 text-right">Cant.</span>
+                      </div>
+                      {productRanking.map((p, i) => (
+                        <div key={p.name} className={`grid grid-cols-[1fr_auto_auto] gap-2 items-center px-4 py-3 ${i < productRanking.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className={`text-[11px] font-black w-5 text-center flex-shrink-0 ${
+                              i === 0 ? 'text-[#E8B63E]' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-700' : 'text-gray-300'
+                            }`}>#{i + 1}</span>
+                            <span className="text-sm font-semibold text-gray-800 truncate">{p.name}</span>
+                          </div>
+                          <span className="text-sm font-black text-[#3C5040] w-20 text-right">{formatCurrency(p.monto)}</span>
+                          <span className="text-sm font-bold text-gray-500 w-12 text-right">{p.cantidad}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── TAB: CLIENTES ── */}
+              {metricsSubTab === 'clientes' && (
+                <div className="flex flex-col gap-2.5">
+                  {clientRanking.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-10 italic">Sin datos para este período.</p>
+                  ) : (
+                    clientRanking.map((c, i) => {
+                      const initials = c.name.split(' ').map(n => n[0] ?? '').join('').slice(0, 2).toUpperCase() || '??';
+                      const medal = i === 0 ? '#E8B63E' : i === 1 ? '#9CA3AF' : i === 2 ? '#92400E' : null;
+                      return (
+                        <div key={c.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3.5 flex items-center gap-3">
+                          <span className="text-xs font-black w-5 text-center flex-shrink-0" style={{ color: medal ?? '#D1D5DB' }}>#{i + 1}</span>
+                          <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center font-heading font-black text-white text-[13px] flex-shrink-0 shadow-md"
+                            style={{ background: `linear-gradient(135deg, #3C5040, #2C5E4C)` }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
+                            <p className="text-[11px] text-gray-400">{c.pedidos} pedido{c.pedidos !== 1 ? 's' : ''}</p>
+                          </div>
+                          <span className="text-base font-black text-[#3C5040] font-heading flex-shrink-0">{formatCurrency(c.total)}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 
