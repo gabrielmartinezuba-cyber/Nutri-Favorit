@@ -327,7 +327,7 @@ export default function AdminDashboardClient({
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
       {/* ── Header ── */}
-      <div className="sticky top-0 z-40 bg-[#6B2139] shadow-md h-16 flex items-center justify-between px-6">
+      <div className="sticky top-0 z-40 bg-[#3C5040] shadow-md h-16 flex items-center justify-between px-6">
         <div className="flex-1 flex justify-start h-full py-2.5 gap-3 items-center">
           <img src="/logofav.png" alt="Favorit Logo" className="h-full w-auto object-contain brightness-0 invert" />
           <div className="h-6 w-[1.5px] bg-white/40 rounded-full" />
@@ -362,7 +362,7 @@ export default function AdminDashboardClient({
             >
               {/* Title */}
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-heading font-black text-[#6B2139]">Analytics</h2>
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Analytics</h2>
                 <p className="text-xs text-gray-500 font-medium">Resumen del negocio basado en entregas</p>
               </div>
 
@@ -481,7 +481,7 @@ export default function AdminDashboardClient({
                             }`}>#{i + 1}</span>
                             <span className="text-sm font-semibold text-gray-800 truncate">{p.name}</span>
                           </div>
-                          <span className="text-sm font-black text-[#6B2139] w-20 text-right">{formatCurrency(p.monto)}</span>
+                          <span className="text-sm font-black text-[#3C5040] w-20 text-right">{formatCurrency(p.monto)}</span>
                           <span className="text-sm font-bold text-gray-500 w-12 text-right">{p.cantidad}</span>
                         </div>
                       ))}
@@ -512,7 +512,7 @@ export default function AdminDashboardClient({
                             <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
                             <p className="text-[11px] text-gray-400">{c.pedidos} pedido{c.pedidos !== 1 ? 's' : ''}</p>
                           </div>
-                          <span className="text-base font-black text-[#6B2139] font-heading flex-shrink-0">{formatCurrency(c.total)}</span>
+                          <span className="text-base font-black text-[#3C5040] font-heading flex-shrink-0">{formatCurrency(c.total)}</span>
                         </div>
                       );
                     })
@@ -533,7 +533,7 @@ export default function AdminDashboardClient({
               className="flex flex-col gap-5"
             >
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-heading font-black text-[#6B2139]">Pedidos Activos</h2>
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Pedidos Activos</h2>
                 <p className="text-xs text-gray-500 font-medium">Gestión de cocina y entregas pendientes</p>
               </div>
 
@@ -546,7 +546,7 @@ export default function AdminDashboardClient({
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Buscar por nombre o teléfono…"
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#6B2139] focus:ring-1 focus:ring-[#6B2139] transition-all"
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
                 />
               </div>
 
@@ -573,7 +573,7 @@ export default function AdminDashboardClient({
               className="flex flex-col gap-5"
             >
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-heading font-black text-[#6B2139]">Historial de Ventas</h2>
+                <h2 className="text-xl font-heading font-black text-[#3C5040]">Historial de Ventas</h2>
                 <p className="text-xs text-gray-500 font-medium">Registro de entregas y cancelaciones</p>
               </div>
 
@@ -586,7 +586,7 @@ export default function AdminDashboardClient({
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Buscar venta por cliente o ID…"
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#6B2139] focus:ring-1 focus:ring-[#6B2139] transition-all"
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
                 />
               </div>
 
@@ -628,7 +628,7 @@ export default function AdminDashboardClient({
                           setStartDate(e.target.value);
                           setTimeFilter('todos');
                         }}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#6B2139] hover:bg-white transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
                       />
                     </div>
                     <div className="relative">
@@ -640,7 +640,7 @@ export default function AdminDashboardClient({
                           setEndDate(e.target.value);
                           setTimeFilter('todos');
                         }}
-                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#6B2139] hover:bg-white transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-12 pr-3 py-2 text-xs font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#3C5040] hover:bg-white transition-all"
                       />
                     </div>
                   </div>
@@ -678,7 +678,7 @@ export default function AdminDashboardClient({
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Buscar cliente por nombre o ID…"
-                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#6B2139] focus:ring-1 focus:ring-[#6B2139] transition-all"
+                  className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
                 />
               </div>
               <div className="flex flex-col gap-3">
@@ -845,7 +845,7 @@ function OrderCard({ order, onStatusChange }: {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[#6B2139] font-bold font-heading">{formatCurrency(order.total_price)}</span>
+          <span className="text-[#3C5040] font-bold font-heading">{formatCurrency(order.total_price)}</span>
           <ChevronRight className={`w-4 h-4 text-gray-300 transition-transform ${expanded ? 'rotate-90' : ''}`} />
         </div>
       </button>
@@ -881,7 +881,7 @@ function OrderCard({ order, onStatusChange }: {
                 value={order.status ?? 'pendiente'}
                 onChange={e => handleChange(e.target.value as OrderStatus)}
                 disabled={updating}
-                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#6B2139] disabled:opacity-60 shadow-sm appearance-none cursor-pointer"
+                className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#3C5040] disabled:opacity-60 shadow-sm appearance-none cursor-pointer"
               >
                 {STATUS_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -929,7 +929,7 @@ function ClientCard({ profile }: { profile: Profile }) {
 
   return (
     <div className="bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-4 flex items-center gap-4">
-      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6B2139] to-[#51192b] flex items-center justify-center font-heading font-bold text-white text-sm flex-shrink-0 shadow-md">
+      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#3C5040] to-[#2C5E4C] flex items-center justify-center font-heading font-bold text-white text-sm flex-shrink-0 shadow-md">
         {initials}
       </div>
       <div className="flex-1 min-w-0">
@@ -965,7 +965,7 @@ function BottomTab({ icon, label, active, onClick, badge }: {
   return (
     <button
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-1.5 p-2 transition-colors ${active ? 'text-brand-borravino' : 'text-gray-400 hover:text-gray-600'}`}
+      className={`relative flex flex-col items-center gap-1.5 p-2 transition-colors ${active ? 'text-[#3C5040]' : 'text-gray-400 hover:text-gray-600'}`}
     >
       <div className="relative">
         {icon}
@@ -979,7 +979,7 @@ function BottomTab({ icon, label, active, onClick, badge }: {
       {active && (
         <motion.div
           layoutId="adminBottomNavIndicator"
-          className="absolute -top-[12px] left-1/2 -translate-x-1/2 w-8 h-[3px] bg-brand-borravino rounded-b-full shadow-sm"
+          className="absolute -top-[12px] left-1/2 -translate-x-1/2 w-8 h-[3px] bg-[#3C5040] rounded-b-full shadow-sm"
         />
       )}
     </button>

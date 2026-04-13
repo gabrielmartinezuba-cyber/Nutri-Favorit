@@ -195,15 +195,15 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
                               {qty === 0 ? (
                                 <button 
                                   onClick={() => handleAddToCart({ ...item, id: itemId })}
-                                  className="bg-[#6B2139] text-white p-2.5 rounded-xl hover:bg-[#5a1c30] active:scale-95 transition-transform shadow-md shadow-[#6B2139]/20"
+                                  className="bg-[#3C5040] text-white p-2.5 rounded-xl hover:bg-[#2c3a2f] active:scale-95 transition-transform shadow-md shadow-[#3C5040]/20"
                                 >
                                   <Plus className="w-5 h-5" />
                                 </button>
                               ) : (
                                 <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-3 py-1.5 border border-gray-200">
-                                  <button onClick={() => handleUpdateQty(itemId, qty - 1)} className="text-[#6B2139] font-bold"><Minus className="w-4 h-4" strokeWidth={3} /></button>
+                                  <button onClick={() => handleUpdateQty(itemId, qty - 1)} className="text-[#3C5040] font-bold"><Minus className="w-4 h-4" strokeWidth={3} /></button>
                                   <span className="font-black text-sm w-4 text-center text-gray-700">{qty}</span>
-                                  <button onClick={() => handleUpdateQty(itemId, qty + 1)} className="text-[#6B2139] font-bold"><Plus className="w-4 h-4" strokeWidth={3} /></button>
+                                  <button onClick={() => handleUpdateQty(itemId, qty + 1)} className="text-[#3C5040] font-bold"><Plus className="w-4 h-4" strokeWidth={3} /></button>
                                 </div>
                               )}
                              </div>
@@ -231,14 +231,14 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
               const descripcion = promo.descripcion || promo.description || '';
               const wppMessage = encodeURIComponent(`¡Hola! Quisiera más información sobre la ${nombre} por $${precio}.`);
               return (
-                <div key={promo.id} className="bg-gradient-to-tr from-[#6B2139] to-[#8a2b4a] text-white p-6 rounded-3xl shadow-lg flex flex-col gap-4">
+                <div key={promo.id} className="bg-gradient-to-tr from-[#3C5040] to-[#516b56] text-white p-6 rounded-3xl shadow-lg flex flex-col gap-4">
                   <div>
                     <h3 className="text-2xl font-black">{nombre}</h3>
                     <p className="text-white/80 mt-1 font-medium text-sm leading-relaxed">{descripcion}</p>
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-3xl font-black">${precio}</span>
-                    <a href={`https://wa.me/${FAVORIT_WHATSAPP}?text=${wppMessage}`} target="_blank" rel="noopener noreferrer" className="bg-white text-[#6B2139] px-6 py-2.5 rounded-xl font-black active:scale-95 transition-transform text-sm shadow-sm text-center">
+                    <a href={`https://wa.me/${FAVORIT_WHATSAPP}?text=${wppMessage}`} target="_blank" rel="noopener noreferrer" className="bg-white text-[#3C5040] px-6 py-2.5 rounded-xl font-black active:scale-95 transition-transform text-sm shadow-sm text-center">
                       CONSULTAR
                     </a>
                   </div>
