@@ -33,6 +33,7 @@ export default function CartPage() {
     if (items.length === 0) return;
     setLoading(true);
 
+    // ── 1. Build WhatsApp message ───────────────────────────────
     const nombre = user?.first_name || 'Cliente';
     const telefono = user?.phone || 'No informado';
 
@@ -40,8 +41,7 @@ export default function CartPage() {
       .map(item => `- ${item.name} x${item.quantity} → $${(item.price * item.quantity).toLocaleString('es-AR')}`)
       .join('\n');
 
-    const mensaje =
-`*Nuevo Pedido - Favorit*
+    const mensaje = `*Nuevo Pedido - Favorit*
 
 Nombre: ${nombre}
 Tel: ${telefono}
@@ -53,69 +53,77 @@ ${detalleItems}
 
 _Pedido generado desde Favorit AI_`;
 
-    // 1. Guardar el pedido en Supabase
-    if (user?.id) {
-      try {
+    const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+
+    try {
+      // ── 2. Save order in Supabase (non-blocking) ────────────────
+      if (user?.id) {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) throw new Error('No hay sesión activa');
 
-        // Insertar Pedido
-        const { error: orderError } = await supabase.from('orders').insert({
-          user_id: session.user.id,
-          customer_name: user.first_name || 'Cliente',
-          customer_phone: user.phone || '',
-          total_price: total,
-          items: items.map(i => ({ 
-            id: i.id,
-            name: i.name, 
-            quantity: i.quantity, 
-            price: i.price,
-            category: i.category 
-          })),
-          status: 'pendiente',
-        });
-
-        if (orderError) throw orderError;
-
-        // 2. Sistema de Puntos
-        const puntosGanados = Math.floor(total / 1000);
-        if (puntosGanados > 0) {
-          // Actualizar perfil usando rpc de incremento para evitar carreras
-          const { error: pointsError } = await supabase.rpc('increment_points', { 
-            row_id: session.user.id, 
-            amount: puntosGanados 
-          });
-
-          // Si falla el RPC (capaz no existe), caemos al método tradicional
-          if (pointsError) {
-             const nuevoPuntaje = (user.favorit_points || 0) + puntosGanados;
-             await supabase.from('profiles').update({ favorit_points: nuevoPuntaje }).eq('id', session.user.id);
-             setUser({ ...user, favorit_points: nuevoPuntaje });
-          } else {
-             setUser({ ...user, favorit_points: (user.favorit_points || 0) + puntosGanados });
-          }
-
-          // Registrar en historial
-          await supabase.from('points_history').insert({
+        if (session) {
+          const { error: orderError } = await supabase.from('orders').insert({
             user_id: session.user.id,
-            puntos: puntosGanados,
-            motivo: `Compra #${Date.now().toString().slice(-6)}`,
+            customer_name: user.first_name || 'Cliente',
+            customer_phone: user.phone || '',
+            total_price: total,
+            items: items.map(i => ({
+              id: i.id,
+              name: i.name,
+              quantity: i.quantity,
+              price: i.price,
+              category: i.category,
+            })),
+            status: 'pendiente',
           });
+
+          if (orderError) console.error('[Checkout] Order error:', orderError);
+
+          // Points system
+          const puntosGanados = Math.floor(total / 1000);
+          if (puntosGanados > 0) {
+            const { error: pointsError } = await supabase.rpc('increment_points', {
+              row_id: session.user.id,
+              amount: puntosGanados,
+            });
+
+            if (pointsError) {
+              const nuevoPuntaje = (user.favorit_points || 0) + puntosGanados;
+              await supabase.from('profiles').update({ favorit_points: nuevoPuntaje }).eq('id', session.user.id);
+              setUser({ ...user, favorit_points: nuevoPuntaje });
+            } else {
+              setUser({ ...user, favorit_points: (user.favorit_points || 0) + puntosGanados });
+            }
+
+            await supabase.from('points_history').insert({
+              user_id: session.user.id,
+              puntos: puntosGanados,
+              motivo: `Compra #${Date.now().toString().slice(-6)}`,
+            });
+          }
         }
-      } catch (err) {
-        console.error('Error crítico guardando pedido:', err);
-        // Opcional: podrías mostrar una alerta, pero abrimos WA igual para no bloquear la venta
+      }
+    } catch (err) {
+      console.error('[Checkout] Supabase error (non-blocking):', err);
+    } finally {
+      // ── 3. Always: clear cart + release button ──────────────────
+      // Runs regardless of any Supabase failure — button never gets stuck
+      clearCart();
+      setLoading(false);
+
+      // ── 4. Open WhatsApp with popup-blocked fallback ────────────
+      // On desktop, window.open() is often blocked by the browser.
+      // If blocked (returns null), we redirect the current tab instead.
+      const newTab = window.open(whatsappUrl, '_blank');
+      if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+        // Popup blocked → redirect current tab to WhatsApp directly
+        window.location.href = whatsappUrl;
+      } else {
+        // Popup succeeded → show success screen in current tab
+        setConfirmed(true);
       }
     }
-
-    // 3. Abrir WhatsApp recién al final
-    const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-    window.open(whatsappUrl, '_blank');
-
-    clearCart();
-    setLoading(false);
-    setConfirmed(true);
   };
+
 
   if (confirmed) {
     return (
