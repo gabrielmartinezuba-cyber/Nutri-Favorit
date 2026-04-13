@@ -934,7 +934,6 @@ function ClientCard({ profile }: { profile: Profile }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 text-[15px] truncate">{profile.first_name ?? 'Sin nombre'}</p>
-        <p className="text-[11px] text-gray-400 font-mono truncate mt-0.5">ID: {profile.id.slice(0, 12)}…</p>
         <p className="text-[11px] text-gray-400 mt-0.5 font-medium">Desde {formatDate(profile.created_at)}</p>
       </div>
       <div className="flex flex-col items-end flex-shrink-0">
