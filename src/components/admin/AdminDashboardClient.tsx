@@ -61,12 +61,34 @@ export const STATUS_CONFIG: Record<string, { label: string; color: string; icon:
   cancelled:       { label: 'Cancelado',      color: 'text-red-500 bg-red-500/10 border-red-500/30',         icon: <XCircle className="w-3 h-3" /> },
 };
 
-const STATUS_OPTIONS: { value: OrderStatus; label: string; color: string }[] = [
-  { value: 'pendiente',      label: '⏳ Pendiente',      color: 'text-[#E8B63E]'   },
-  { value: 'en_preparacion', label: '🔥 En Preparación', color: 'text-orange-500'  },
-  { value: 'entregado',      label: '✅ Entregado',      color: 'text-emerald-600' },
-  { value: 'cancelado',      label: '❌ Cancelado',      color: 'text-red-500'     },
+const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
+  { value: 'pendiente',      label: 'Pendiente'      },
+  { value: 'en_preparacion', label: 'En Preparación' },
+  { value: 'entregado',      label: 'Entregado'      },
+  { value: 'cancelado',      label: 'Cancelado'      },
 ];
+
+type TimeFilter = 'todos' | 'hoy' | 'semana' | 'mes';
+const TIME_FILTERS: { value: TimeFilter; label: string }[] = [
+  { value: 'todos',  label: 'Todos'  },
+  { value: 'hoy',    label: 'Hoy'    },
+  { value: 'semana', label: 'Semana' },
+  { value: 'mes',    label: 'Mes'    },
+];
+
+function isWithin(dateStr: string, filter: TimeFilter): boolean {
+  if (filter === 'todos') return true;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (filter === 'hoy') {
+    return d.toDateString() === now.toDateString();
+  }
+  const ms = (filter === 'semana' ? 7 : 30) * 24 * 60 * 60 * 1000;
+  return now.getTime() - d.getTime() <= ms;
+}
+
+const ACTIVE_STATUSES_ADMIN = new Set(['pendiente', 'pending', 'en_preparacion']);
+const DONE_STATUSES_ADMIN   = new Set(['entregado', 'delivered', 'cancelado', 'cancelled']);
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-AR', {
@@ -126,6 +148,9 @@ export default function AdminDashboardClient({
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('todos');
+  const [activeAccordionOpen, setActiveAccordionOpen] = useState(true);
+  const [doneAccordionOpen, setDoneAccordionOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -177,11 +202,17 @@ export default function AdminDashboardClient({
   const filteredOrders = useMemo(() => {
     const q = search.toLowerCase();
     return orders.filter(o =>
-      (o.customer_name?.toLowerCase().includes(q) || '') ||
-      (o.customer_phone?.toLowerCase().includes(q) || '') ||
-      o.id.toLowerCase().includes(q)
+      isWithin(o.created_at, timeFilter) &&
+      (
+        !q ||
+        (o.customer_name?.toLowerCase().includes(q) || false) ||
+        (o.customer_phone?.toLowerCase().includes(q) || false)
+      )
     );
-  }, [orders, search]);
+  }, [orders, search, timeFilter]);
+
+  const activeOrders = filteredOrders.filter(o => ACTIVE_STATUSES_ADMIN.has(o.status ?? ''));
+  const doneOrders   = filteredOrders.filter(o => DONE_STATUSES_ADMIN.has(o.status ?? ''));
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
@@ -236,6 +267,7 @@ export default function AdminDashboardClient({
               transition={{ duration: 0.2 }}
               className="flex flex-col gap-4"
             >
+              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -243,24 +275,49 @@ export default function AdminDashboardClient({
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Buscar pedido por cliente o ID…"
+                  placeholder="Buscar por nombre o teléfono…"
                   className="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#3C5040] focus:ring-1 focus:ring-[#3C5040] transition-all"
                 />
               </div>
 
-              <div className="flex flex-col gap-3">
-                {filteredOrders.length === 0 ? (
-                  <EmptyState icon={<ShoppingBag className="w-8 h-8 text-white/20" />} message={search ? 'Sin resultados para tu búsqueda' : 'Todavía no hay pedidos registrados'} />
-                ) : (
-                  filteredOrders.map(order => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onStatusChange={handleStatusChange}
-                    />
-                  ))
-                )}
+              {/* Time filter pills */}
+              <div className="flex gap-2">
+                {TIME_FILTERS.map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setTimeFilter(f.value)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                      timeFilter === f.value
+                        ? 'bg-[#3C5040] text-white border-[#3C5040] shadow-sm'
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-[#3C5040]/40'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
+
+              {/* Active accordion */}
+              <AdminAccordion
+                title="Pedidos activos"
+                orders={activeOrders}
+                open={activeAccordionOpen}
+                onToggle={() => setActiveAccordionOpen(p => !p)}
+                accentColor="text-orange-500"
+                emptyMsg="Sin pedidos activos en este período."
+                onStatusChange={handleStatusChange}
+              />
+
+              {/* Done accordion */}
+              <AdminAccordion
+                title="Pedidos finalizados"
+                orders={doneOrders}
+                open={doneAccordionOpen}
+                onToggle={() => setDoneAccordionOpen(p => !p)}
+                accentColor="text-gray-400"
+                emptyMsg="Sin pedidos finalizados en este período."
+                onStatusChange={handleStatusChange}
+              />
             </motion.div>
           )}
 
@@ -350,6 +407,61 @@ export default function AdminDashboardClient({
   );
 }
 
+// ── Admin Accordion ────────────────────────────────────────────
+function AdminAccordion({
+  title, orders, open, onToggle, accentColor, emptyMsg, onStatusChange,
+}: {
+  title: string;
+  orders: Order[];
+  open: boolean;
+  onToggle: () => void;
+  accentColor: string;
+  emptyMsg: string;
+  onStatusChange: (order: Order, status: OrderStatus) => Promise<void>;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between bg-white border border-gray-100 shadow-sm rounded-2xl px-5 py-3.5 active:scale-[0.99] transition-all"
+      >
+        <div className="flex items-center gap-2.5">
+          <span className={`text-sm font-black uppercase tracking-wider ${accentColor}`}>{title}</span>
+          <span className={`text-xs font-black px-2 py-0.5 rounded-full bg-gray-100 text-gray-500`}>
+            {orders.length}
+          </span>
+        </div>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className={`w-5 h-5 ${accentColor}`} />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-2.5 pt-1">
+              {orders.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-5 italic">{emptyMsg}</p>
+              ) : (
+                orders.map(order => (
+                  <OrderCard key={order.id} order={order} onStatusChange={onStatusChange} />
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Order Card ─────────────────────────────────────────────────
 function OrderCard({ order, onStatusChange }: {
   order: Order;
@@ -388,8 +500,7 @@ function OrderCard({ order, onStatusChange }: {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 text-[12px] text-gray-400">
-            <span className="font-mono">{order.id.slice(0, 8)}…</span>
+          <div className="flex items-center gap-2 text-[12px] text-gray-400">
             <span>{formatDate(order.created_at)}</span>
           </div>
         </div>
