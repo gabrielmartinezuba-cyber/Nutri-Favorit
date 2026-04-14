@@ -53,6 +53,7 @@ export default function ProfileHubPage() {
     await supabase.auth.signOut();
     setUser(null);
     router.push('/');
+    router.refresh();
   };
 
   if (!user) {

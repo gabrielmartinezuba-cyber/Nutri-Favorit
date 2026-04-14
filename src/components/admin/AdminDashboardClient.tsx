@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductsTab, { type Product as CatalogProduct } from './ProductsTab';
 import VitalFoodTab, { type DailyMenu, type FixedItem, type Promo } from './VitalFoodTab';
 import { updateOrderStatus, type OrderStatus } from '@/app/admin/actions/orderActions';
+import { useAuthStore } from '@/store/authStore';
 
 // ── Types ──────────────────────────────────────────────────────
 type Profile = {
@@ -164,6 +165,7 @@ export default function AdminDashboardClient({
   stats: Stats;
   vitalFoodData: VitalFoodData;
 }) {
+  const { setUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'metricas' | 'pedidos' | 'ventas' | 'clientes' | 'productos'>('pedidos');
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
@@ -188,7 +190,9 @@ export default function AdminDashboardClient({
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setUser(null);
     router.push('/admin/login');
+    router.refresh();
   };
 
   const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {

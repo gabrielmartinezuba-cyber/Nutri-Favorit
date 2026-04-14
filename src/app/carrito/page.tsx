@@ -29,19 +29,20 @@ export default function CartPage() {
 
   if (!isHydrated) return null; // Wait for hydration on cart page to avoid flicker
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (items.length === 0) return;
     setLoading(true);
 
-    // ── 1. Build WhatsApp message ───────────────────────────────
-    const nombre = user?.first_name || 'Cliente';
-    const telefono = user?.phone || 'No informado';
+    try {
+      // ── Paso A: Armed carefully ───────────────────────────────
+      const nombre = user?.first_name || 'Cliente';
+      const telefono = user?.phone || 'No informado';
 
-    const detalleItems = items
-      .map(item => `- ${item.name} x${item.quantity} → $${(item.price * item.quantity).toLocaleString('es-AR')}`)
-      .join('\n');
+      const detalleItems = items
+        .map(item => `- ${item.name} x${item.quantity} → $${(item.price * item.quantity).toLocaleString('es-AR')}`)
+        .join('\n');
 
-    const mensaje = `*Nuevo Pedido - Favorit*
+      const mensaje = `*Nuevo Pedido - Favorit*
 
 Nombre: ${nombre}
 Tel: ${telefono}
@@ -53,68 +54,53 @@ ${detalleItems}
 
 _Pedido generado desde Favorit AI_`;
 
-    const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+      const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
 
-    try {
-      // ── 2. Save order in Supabase (non-blocking) ────────────────
+      // ── Paso B: Fire and Forget (SIN await) ───────────────────
+      // Prioridad: El usuario DEBE llegar a WhatsApp. El guardado es secundario.
       if (user?.id) {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          const { error: orderError } = await supabase.from('orders').insert({
-            user_id: session.user.id,
-            customer_name: user.first_name || 'Cliente',
-            customer_phone: user.phone || '',
-            total_price: total,
-            items: items.map(i => ({
-              id: i.id,
-              name: i.name,
-              quantity: i.quantity,
-              price: i.price,
-              category: i.category,
-            })),
-            status: 'pendiente',
-          });
-
-          if (orderError) console.error('[Checkout] Order error:', orderError);
-
-          // Points system
-          const puntosGanados = Math.floor(total / 1000);
-          if (puntosGanados > 0) {
-            const { error: pointsError } = await supabase.rpc('increment_points', {
-              row_id: session.user.id,
-              amount: puntosGanados,
-            });
-
-            if (pointsError) {
-              const nuevoPuntaje = (user.favorit_points || 0) + puntosGanados;
-              await supabase.from('profiles').update({ favorit_points: nuevoPuntaje }).eq('id', session.user.id);
-              setUser({ ...user, favorit_points: nuevoPuntaje });
-            } else {
-              setUser({ ...user, favorit_points: (user.favorit_points || 0) + puntosGanados });
-            }
-
-            await supabase.from('points_history').insert({
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session) {
+            supabase.from('orders').insert({
               user_id: session.user.id,
-              puntos: puntosGanados,
-              motivo: `Compra #${Date.now().toString().slice(-6)}`,
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[Checkout] Supabase error (non-blocking):', err);
-    } finally {
-      // ── 3. Always: clear cart + release button ──────────────────
-      // Guaranteed to run even if Supabase fails
-      clearCart();
-      setLoading(false);
+              customer_name: user.first_name || 'Cliente',
+              customer_phone: user.phone || '',
+              total_price: total,
+              items: items.map(i => ({
+                id: i.id,
+                name: i.name,
+                quantity: i.quantity,
+                price: i.price,
+                category: i.category,
+              })),
+              status: 'pendiente',
+            }).then(({ error }) => {
+              if (error) console.error('[DB Save Error]', error);
+              else console.log('[DB Sync Success]');
+            }).catch(e => console.error('[DB Crash]', e));
 
-      // ── 4. Redirect to WhatsApp in the SAME tab ─────────────────
-      // window.open() is blocked by iOS Safari & Chrome when called
-      // inside async callbacks. window.location.href is ALWAYS allowed
-      // by every browser and opens the native WhatsApp app on mobile.
+            // Puntos (opcional, sin await)
+            const puntosGanados = Math.floor(total / 1000);
+            if (puntosGanados > 0) {
+              supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados }).then(() => {});
+            }
+          }
+        }).catch(e => console.error('[Session Error]', e));
+      }
+
+      // ── Paso C: Limpieza INMEDIATA ────────────────────────────
+      clearCart();
+
+      // ── Paso D: Redirección INMEDIATA ──────────────────────────
       window.location.href = whatsappUrl;
+
+    } catch (error) {
+      console.error('[CRITICAL FLOW ERROR]', error);
+      // Si algo falla catastróficamente, igual lo llevamos a WA.
+      window.location.href = `https://wa.me/${FAVORIT_WHATSAPP}`;
+    } finally {
+      // Garantizamos que el botón se libere (aunque el redirect ya esté en marcha)
+      setLoading(false);
     }
   };
 

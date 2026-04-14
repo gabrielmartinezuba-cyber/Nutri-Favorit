@@ -25,7 +25,7 @@ export default function PhoneBarrier() {
           .eq('id', session.user.id)
           .single();
         
-        if (profile) setUser(profile);
+        setUser(profile || null);
       } else {
         setUser(null);
       }
@@ -40,7 +40,7 @@ export default function PhoneBarrier() {
           .select('*')
           .eq('id', session.user.id)
           .single();
-        if (profile) setUser(profile);
+        setUser(profile || null);
       } else {
         setUser(null);
       }
