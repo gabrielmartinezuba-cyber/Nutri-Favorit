@@ -101,7 +101,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email de administrador"
               required
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#6B2139]/70 focus:bg-white/8 transition-all"
+              className="w-full !bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm !text-white placeholder-white/30 focus:outline-none focus:border-[#6B2139]/70 focus:!bg-white/8 transition-all"
             />
           </div>
 
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
               required
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#6B2139]/70 transition-all"
+              className="w-full !bg-white/5 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-sm !text-white placeholder-white/30 focus:outline-none focus:border-[#6B2139]/70 transition-all"
             />
             <button
               type="button"
