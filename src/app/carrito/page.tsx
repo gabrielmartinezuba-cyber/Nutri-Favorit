@@ -59,33 +59,39 @@ _Pedido generado desde Favorit AI_`;
       // ── Paso B: Fire and Forget (SIN await) ───────────────────
       // Prioridad: El usuario DEBE llegar a WhatsApp. El guardado es secundario.
       if (user?.id) {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-          if (session) {
-            supabase.from('orders').insert({
-              user_id: session.user.id,
-              customer_name: user.first_name || 'Cliente',
-              customer_phone: user.phone || '',
-              total_price: total,
-              items: items.map(i => ({
-                id: i.id,
-                name: i.name,
-                quantity: i.quantity,
-                price: i.price,
-                category: i.category,
-              })),
-              status: 'pendiente',
-            }).then(({ error }) => {
-              if (error) console.error('[DB Save Error]', error);
-              else console.log('[DB Sync Success]');
-            }).catch(e => console.error('[DB Crash]', e));
+        supabase.auth.getSession().then(
+          ({ data: { session } }) => {
+            if (session) {
+              void supabase.from('orders').insert({
+                user_id: session.user.id,
+                customer_name: user.first_name || 'Cliente',
+                customer_phone: user.phone || '',
+                total_price: total,
+                items: items.map(i => ({
+                  id: i.id,
+                  name: i.name,
+                  quantity: i.quantity,
+                  price: i.price,
+                  category: i.category,
+                })),
+                status: 'pendiente',
+              }).then(
+                ({ error }) => {
+                  if (error) console.error('[DB Save Error]', error);
+                  else console.log('[DB Sync Success]');
+                },
+                (e) => console.error('[DB Crash]', e),
+              );
 
-            // Puntos (opcional, sin await)
-            const puntosGanados = Math.floor(total / 1000);
-            if (puntosGanados > 0) {
-              supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados }).then(() => {});
+              // Puntos (opcional, sin await)
+              const puntosGanados = Math.floor(total / 1000);
+              if (puntosGanados > 0) {
+                void supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados });
+              }
             }
-          }
-        }).catch(e => console.error('[Session Error]', e));
+          },
+          (e) => console.error('[Session Error]', e),
+        );
       }
 
       // ── Paso C: Limpieza INMEDIATA ────────────────────────────
