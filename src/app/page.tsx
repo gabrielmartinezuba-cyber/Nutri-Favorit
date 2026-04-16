@@ -14,7 +14,7 @@ export default async function Home() {
 
   // ── 2. Obtener pedidos activos (Seguimiento) ──
   const { data: { user } } = await supabase.auth.getUser();
-  let activeOrders = [];
+  let activeOrders: any[] = [];
 
   if (user) {
     const { data: orders } = await supabase
