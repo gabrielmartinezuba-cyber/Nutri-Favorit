@@ -3,6 +3,7 @@ import FeaturedProducts from '@/components/home/FeaturedProducts';
 import { createClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { Clock, Package, ChevronRight } from 'lucide-react';
+import TurnosNutricionales from '@/components/shared/TurnosNutricionales';
 
 export default async function Home() {
   const supabase = await createClient();
@@ -74,7 +75,7 @@ export default async function Home() {
         
         <h3 className="text-2xl font-heading font-black text-white z-10">Puntos Favorit</h3>
         <p className="text-sm text-gray-200 z-10 max-w-[80%] mb-3">
-          Gana puntos con cada compra y canjealos por desayunos gratis o consultas nutricionales.
+          Gana puntos con cada compra y canjealos en nuevos pedidos.
         </p>
         <Link 
           href="/perfil/billetera" 
@@ -83,6 +84,11 @@ export default async function Home() {
           Mis Puntos
         </Link>
       </section>
+
+      {/* Turnos Nutricionales Component */}
+      <div className="mx-1">
+        <TurnosNutricionales />
+      </div>
     </div>
   );
 }

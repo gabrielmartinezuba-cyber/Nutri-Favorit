@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, ShoppingBag, Sparkles, HeartPulse } from 'lucide-react';
+import { Home, ShoppingBag, HeartPulse } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -21,7 +21,6 @@ export default function Bottombar() {
   const navItems = [
     { label: 'Inicio', icon: Home, href: '/' },
     { label: 'Tienda', icon: ShoppingBag, href: '/tienda/favorit' },
-    { label: 'Nutri AI', icon: Sparkles, href: '/chat' },
     { label: 'Salud', icon: HeartPulse, href: '/salud' },
     { 
       label: 'Ayuda', 
