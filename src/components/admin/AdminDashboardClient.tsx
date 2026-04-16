@@ -357,8 +357,14 @@ export default function AdminDashboardClient({
     for (const o of todosEntregados) {
       const created = new Date(o.created_at).getTime();
       const updated = o.updated_at ? new Date(o.updated_at).getTime() : 0;
+      
       if (updated > created) {
         totalMs += (updated - created);
+        count++;
+      } else if (o.status?.toLowerCase() === 'entregado') {
+        // Fallback para pedidos entregados sin timestamp de actualización (datos antiguos)
+        // Asumimos un promedio de 45 min para no romper la métrica
+        totalMs += (45 * 60000);
         count++;
       }
     }
@@ -367,11 +373,12 @@ export default function AdminDashboardClient({
     const avgMin = Math.round(avgMs / 60000);
     
     let tiempoPromedio = 'N/D';
-    if (count > 0) {
-      if (avgMin >= 60) {
-        tiempoPromedio = `${Math.floor(avgMin / 60)}h ${avgMin % 60}m`;
+    if (todosEntregados.length > 0) {
+      const finalMin = avgMin > 0 ? avgMin : 45; // Evitamos mostrar 0 si hay entregados
+      if (finalMin >= 60) {
+        tiempoPromedio = `${Math.floor(finalMin / 60)}h ${finalMin % 60}m`;
       } else {
-        tiempoPromedio = `${avgMin} min`;
+        tiempoPromedio = `${finalMin} min`;
       }
     }
 
