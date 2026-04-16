@@ -5,7 +5,7 @@ import {
   Users, ShoppingBag, Star, Search, TrendingUp,
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
   Package, Phone, MessageSquare, ChevronDown, Loader2,
-  CircleDollarSign, Calendar, BarChart2, Award, Wallet, Ticket,
+  CircleDollarSign, Calendar, BarChart2, Award, Wallet, Ticket, Zap, Timer,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -34,6 +34,7 @@ type Order = {
   items: OrderItem[] | null;
   status: string | null;
   created_at: string;
+  updated_at?: string;
   user_id: string | null;
   points_awarded?: boolean;
 };
@@ -76,6 +77,13 @@ const TIME_FILTERS: { value: TimeFilter; label: string }[] = [
   { value: 'hoy',    label: 'Hoy'    },
   { value: 'semana', label: 'Semana' },
   { value: 'mes',    label: 'Mes'    },
+];
+
+const TIME_FILTERS_VENTAS: { value: TimeFilter; label: string }[] = [
+  { value: 'hoy',    label: 'Hoy'    },
+  { value: 'semana', label: 'Semana' },
+  { value: 'mes',    label: 'Mes'    },
+  { value: 'todos',  label: 'Todos'  },
 ];
 
 function isWithin(dateStr: string, filter: TimeFilter): boolean {
@@ -170,12 +178,12 @@ export default function AdminDashboardClient({
   const [catalogSubTab, setCatalogSubTab] = useState<'favorit' | 'vitalfood'>('favorit');
   const [search, setSearch] = useState('');
   const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>('todos');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('hoy');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [activeAccordionOpen, setActiveAccordionOpen] = useState(true);
   const [doneAccordionOpen, setDoneAccordionOpen] = useState(false);
-  const [metricsSubTab, setMetricsSubTab] = useState<'ingresos' | 'productos' | 'clientes'>('ingresos');
+  const [metricsSubTab, setMetricsSubTab] = useState<'ingresos' | 'productos' | 'clientes' | 'operaciones'>('ingresos');
   const [mTimeFilter, setMTimeFilter] = useState<TimeFilter>('todos');
   const [mStartDate, setMStartDate] = useState('');
   const [mEndDate, setMEndDate] = useState('');
@@ -197,7 +205,7 @@ export default function AdminDashboardClient({
 
   const handleStatusChange = async (order: Order, newStatus: OrderStatus) => {
     // Optimistically update local state
-    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o));
 
     const result = await updateOrderStatus(
       order.id,
@@ -328,6 +336,56 @@ export default function AdminDashboardClient({
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [metricOrders]);
 
+  const operacionesData = useMemo(() => {
+    const entregados = metricOrders.filter(o => o.status === 'entregado' || o.status === 'delivered');
+    let totalMs = 0;
+    let validCount = 0;
+
+    for (const o of entregados) {
+      const created = new Date(o.created_at).getTime();
+      const updated = o.updated_at ? new Date(o.updated_at).getTime() : created;
+      if (updated > created) {
+        totalMs += (updated - created);
+        validCount++;
+      }
+    }
+
+    const avgMs = validCount > 0 ? totalMs / validCount : 0;
+    const avgMin = Math.round(avgMs / 60000);
+    const tiempoPromedio = avgMin > 0 ? (avgMin > 60 ? `${Math.floor(avgMin/60)}h ${avgMin%60}m` : `${avgMin} min`) : 'N/D';
+
+    const cancelados = metricOrders.filter(o => o.status === 'cancelado' || o.status === 'cancelled').length;
+    const tasaCancelacion = metricOrders.length > 0 ? Math.round((cancelados / metricOrders.length) * 100) : 0;
+
+    const horas: Record<string, number> = {};
+    const dias: Record<string, number> = { 'Domingo': 0, 'Lunes': 0, 'Martes': 0, 'Miércoles': 0, 'Jueves': 0, 'Viernes': 0, 'Sábado': 0 };
+    const diasNombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+    for (const o of metricOrders) {
+      const d = new Date(o.created_at);
+      const h = d.getHours();
+      const hFmt = h < 12 ? `${h === 0 ? 12 : h} AM` : `${h === 12 ? 12 : h - 12} PM`;
+      horas[hFmt] = (horas[hFmt] || 0) + 1;
+      
+      const dayName = diasNombres[d.getDay()];
+      dias[dayName] = (dias[dayName] || 0) + 1;
+    }
+
+    let horaPico = 'N/D';
+    let maxHora = 0;
+    for (const [h, count] of Object.entries(horas)) {
+      if (count > maxHora) { maxHora = count; horaPico = h; }
+    }
+
+    let diaMenor = 'N/D';
+    let maxDia = 0;
+    for (const [d, count] of Object.entries(dias)) {
+      if (count > maxDia) { maxDia = count; diaMenor = d; }
+    }
+
+    return { tiempoPromedio, horaPico, diaMayorDemanda: diaMenor };
+  }, [metricOrders]);
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
       {/* ── Header ── */}
@@ -376,6 +434,7 @@ export default function AdminDashboardClient({
                   { key: 'ingresos',  label: 'Ingresos',  icon: <Wallet className="w-3.5 h-3.5" /> },
                   { key: 'productos', label: 'Productos', icon: <BarChart2 className="w-3.5 h-3.5" /> },
                   { key: 'clientes',  label: 'Clientes',  icon: <Award className="w-3.5 h-3.5" /> },
+                  { key: 'operaciones', label: 'Operaciones', icon: <Timer className="w-3.5 h-3.5" /> },
                 ] as const).map(t => (
                   <button
                     key={t.key}
@@ -523,6 +582,38 @@ export default function AdminDashboardClient({
                   )}
                 </div>
               )}
+
+              {/* ── TAB: OPERACIONES ── */}
+              {metricsSubTab === 'operaciones' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <AnalyticCard
+                    icon={<Timer className="w-5 h-5" />}
+                    label="Tiem. Prom. Entrega"
+                    value={operacionesData.tiempoPromedio}
+                    accent="from-indigo-50 to-white border-indigo-100"
+                    iconColor="text-indigo-600"
+                    sub="promedio por pedido"
+                  />
+                  <AnalyticCard
+                    icon={<Zap className="w-5 h-5" />}
+                    label="Hora Pico"
+                    value={operacionesData.horaPico}
+                    accent="from-amber-50 to-white border-amber-100"
+                    iconColor="text-amber-500"
+                    sub="con mayor demanda"
+                  />
+                  <div className="col-span-2">
+                    <AnalyticCard
+                      icon={<Calendar className="w-5 h-5" />}
+                      label="Día Mayor Demanda"
+                      value={operacionesData.diaMayorDemanda}
+                      accent="from-violet-50 to-white border-violet-100"
+                      iconColor="text-violet-600"
+                      sub="día más activo"
+                    />
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -598,7 +689,7 @@ export default function AdminDashboardClient({
               <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-4 flex flex-col gap-4">
                 {/* Time filter pills */}
                 <div className="flex gap-2">
-                  {TIME_FILTERS.map(f => (
+                  {TIME_FILTERS_VENTAS.map(f => (
                     <button
                       key={f.value}
                       onClick={() => {
@@ -657,7 +748,7 @@ export default function AdminDashboardClient({
                   <EmptyState icon={<TrendingUp className="w-8 h-8 text-white/20" />} message="No se encontraron ventas para este período" />
                 ) : (
                   salesOrders.map(order => (
-                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} />
+                    <OrderCard key={order.id} order={order} onStatusChange={handleStatusChange} compact={timeFilter === 'todos'} />
                   ))
                 )}
               </div>
@@ -807,9 +898,10 @@ function AdminAccordion({
 }
 
 // ── Order Card ─────────────────────────────────────────────────
-function OrderCard({ order, onStatusChange }: {
+function OrderCard({ order, onStatusChange, compact = false }: {
   order: Order;
   onStatusChange: (order: Order, status: OrderStatus) => Promise<void>;
+  compact?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -822,6 +914,38 @@ function OrderCard({ order, onStatusChange }: {
     await onStatusChange(order, newStatus);
     setUpdating(false);
   };
+
+  if (compact) {
+    return (
+      <div className="bg-white border text-sm text-gray-900 border-gray-100 shadow-sm rounded-xl overflow-hidden py-3 px-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors w-full cursor-pointer gap-2" onClick={() => setExpanded(!expanded)}>
+        {/* Fecha (corta) */}
+        <div className="text-[11px] text-gray-400 font-medium whitespace-nowrap min-w-[50px]">
+          {new Date(order.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+        </div>
+        
+        {/* Cliente */}
+        <div className="font-semibold text-[13px] truncate flex-1 min-w-0 pr-2">
+          {order.customer_name || 'Anónimo'}
+        </div>
+
+        {/* Status Label (Pequeña) */}
+        <div className={`hidden xs:flex flex-shrink-0 items-center justify-center border font-bold uppercase tracking-wider rounded-md px-1.5 py-0.5 text-[9px] ${cfg.color}`}>
+          {cfg.label}
+        </div>
+
+        {/* Monto Total */}
+        <div className="font-black text-[#3C5040] font-heading flex-shrink-0 min-w-[50px] text-right">
+          {formatCurrency(order.total_price)}
+        </div>
+
+        {expanded && (
+          <div className="absolute top-0 left-0 w-0 h-0 overflow-hidden">
+             {/* Invisible so it doesn't break flex row but lets us keep standard card logic if needed or just disable expansion in compact */}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-gray-100 shadow-sm rounded-2xl overflow-hidden">
