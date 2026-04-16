@@ -34,7 +34,7 @@ export default function CartPage() {
     setLoading(true);
 
     try {
-      // ── Paso A: Armed carefully ───────────────────────────────
+      // ── Paso A: Preparar datos ───────────────────────────────
       const nombre = user?.first_name || 'Cliente';
       const telefono = user?.phone || 'No informado';
 
@@ -56,54 +56,59 @@ _Pedido generado desde Favorit AI_`;
 
       const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
 
-      // ── Paso B: Guardado en DB (CON await seguro) ───────────────────
-      // Usamos await para evitar que iOS/Android cancelen la petición
-      // al cambiar de app, pero lo envolvemos en un try/catch para NUNCA trabar el flujo.
+      // ── Paso B: Guardado en DB (CON await y TIMEOUT de seguridad) ──
+      // Usamos await para que la petición no se cancele en móviles,
+      // pero limitamos el tiempo de espera para que nunca se trabe la UI.
       if (user?.id) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const { error: insertError } = await supabase.from('orders').insert({
-              user_id: session.user.id,
-              customer_name: user.first_name || 'Cliente',
-              customer_phone: user.phone || '',
-              total_price: total,
-              items: items.map(i => ({
-                id: i.id,
-                name: i.name,
-                quantity: i.quantity,
-                price: i.price,
-                category: i.category,
-              })),
-              status: 'pendiente',
-            });
+          // Timeout de 2.5 segundos para la DB
+          const dbPromise = (async () => {
+            const sessionResponse = await supabase.auth.getSession();
+            const session = sessionResponse.data?.session;
+            
+            if (session) {
+              await supabase.from('orders').insert({
+                user_id: session.user.id,
+                customer_name: user.first_name || 'Cliente',
+                customer_phone: user.phone || '',
+                total_price: total,
+                items: items.map(i => ({
+                  id: i.id,
+                  name: i.name,
+                  quantity: i.quantity,
+                  price: i.price,
+                  category: i.category,
+                })),
+                status: 'pendiente',
+              });
 
-            if (insertError) console.error('[DB Save Error]', insertError);
-
-            // Puntos (await seguro)
-            const puntosGanados = Math.floor(total / 1000);
-            if (puntosGanados > 0) {
-              await supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados });
+              const puntosGanados = Math.floor(total / 1000);
+              if (puntosGanados > 0) {
+                await supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados });
+              }
             }
-          }
+          })();
+
+          // Carrera entre la DB y un reloj de 2.5s
+          await Promise.race([
+            dbPromise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout DB')), 2500))
+          ]);
         } catch (dbError) {
-          console.error('[DB Crash - Ignorado]', dbError);
+          console.error('[DB Operation Error/Timeout - Ignorado]', dbError);
         }
       }
 
-      // ── Paso C: Limpieza INMEDIATA ────────────────────────────
+      // ── Paso C: Limpieza y Redirección ────────────────────────
       clearCart();
-
-      // ── Paso D: Redirección INMEDIATA ──────────────────────────
       window.location.href = whatsappUrl;
 
     } catch (error) {
       console.error('[CRITICAL FLOW ERROR]', error);
-      // Si algo falla catastróficamente, igual lo llevamos a WA.
       window.location.href = `https://wa.me/${FAVORIT_WHATSAPP}`;
     } finally {
-      // Garantizamos que el botón se libere (aunque el redirect ya esté en marcha)
-      setLoading(false);
+      // Liberamos el botón tras un pequeño delay para asegurar un estado limpio
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
