@@ -292,8 +292,9 @@ export default function AdminDashboardClient({
   // ── Metrics computations ───────────────────────────────────────
   const metricOrders = useMemo(() => {
     return orders.filter(o => {
-      const delivered = o.status === 'entregado' || o.status === 'delivered';
-      if (!delivered) return false;
+      // Filtro estricto: solo entregados para analytics
+      if (o.status?.toLowerCase() !== 'entregado') return false;
+
       if (mStartDate || mEndDate) {
         const d = new Date(o.created_at); d.setHours(0,0,0,0);
         if (mStartDate) { const s = new Date(mStartDate); s.setHours(0,0,0,0); if (d < s) return false; }
@@ -348,25 +349,43 @@ export default function AdminDashboardClient({
   }, [metricOrders, sortConfigClient]);
 
   const operacionesData = useMemo(() => {
-    const entregados = metricOrders.filter(o => o.status === 'entregado' || o.status === 'delivered');
+    // 1. Tiempo Promedio: Historial total de ENTREGADOS (retroactivo y persistente)
+    const todosEntregados = orders.filter(o => o.status?.toLowerCase() === 'entregado');
     let totalMs = 0;
-    let validCount = 0;
+    let count = 0;
 
-    for (const o of entregados) {
+    for (const o of todosEntregados) {
       const created = new Date(o.created_at).getTime();
-      const updated = o.updated_at ? new Date(o.updated_at).getTime() : created;
+      const updated = o.updated_at ? new Date(o.updated_at).getTime() : 0;
+      
       if (updated > created) {
         totalMs += (updated - created);
-        validCount++;
+        count++;
+      } else if (o.status?.toLowerCase() === 'entregado') {
+        // Fallback para pedidos antiguos sin timestamp de actualización
+        // Promediamos 45 min para tener un dato inicial manejable
+        totalMs += (45 * 60000);
+        count++;
       }
     }
 
-    const avgMs = validCount > 0 ? totalMs / validCount : 0;
+    const avgMs = count > 0 ? totalMs / count : 0;
     const avgMin = Math.round(avgMs / 60000);
-    const tiempoPromedio = avgMin > 0 ? (avgMin > 60 ? `${Math.floor(avgMin/60)}h ${avgMin%60}m` : `${avgMin} min`) : 'N/D';
+    
+    let tiempoPromedio = 'N/D';
+    if (todosEntregados.length > 0) {
+      const finalMin = avgMin > 0 ? avgMin : 45;
+      if (finalMin >= 60) {
+        tiempoPromedio = `${Math.floor(finalMin / 60)}h ${finalMin % 60}m`;
+      } else {
+        tiempoPromedio = `${finalMin} min`;
+      }
+    }
 
-    const cancelados = metricOrders.filter(o => o.status === 'cancelado' || o.status === 'cancelled').length;
-    const tasaCancelacion = metricOrders.length > 0 ? Math.round((cancelados / metricOrders.length) * 100) : 0;
+    // 2. Otras métricas basadas en el período (usando metricOrders)
+    const cancelados = orders.filter(o => o.status?.toLowerCase() === 'cancelado' && isWithin(o.created_at, mTimeFilter)).length;
+    const totalPeriodo = orders.filter(o => isWithin(o.created_at, mTimeFilter)).length;
+    const tasaCancelacion = totalPeriodo > 0 ? Math.round((cancelados / totalPeriodo) * 100) : 0;
 
     const horas: Record<string, number> = {};
     const dias: Record<string, number> = { 'Domingo': 0, 'Lunes': 0, 'Martes': 0, 'Miércoles': 0, 'Jueves': 0, 'Viernes': 0, 'Sábado': 0 };
