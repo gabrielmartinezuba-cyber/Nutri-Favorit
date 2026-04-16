@@ -10,6 +10,9 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FAVORIT_WHATSAPP } from '@/config/contacto';
 
+// Initialize supabase outside to keep it persistent across renders
+const supabase = createClient();
+
 export default function CartPage() {
   const { 
     items, 
@@ -25,7 +28,6 @@ export default function CartPage() {
   const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   if (!isHydrated) return null; // Wait for hydration on cart page to avoid flicker
 
@@ -58,60 +60,61 @@ _Pedido generado desde Favorit AI_`;
       // ── Paso B: Guardado en DB ──────────────────────────────────
       if (user?.id) {
         try {
-          const dbFlow = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) throw new Error('No active session');
+          // Usamos un timeout mayor (6s) para asegurar el guardado
+          const dbWork = async () => {
+            const sessionObj = await supabase.auth.getSession();
+            const session = sessionObj.data?.session;
+            
+            if (!session) {
+              console.warn('[CHECKOUT] Sin sesión activa de Supabase');
+              return;
+            }
 
-            // 1. Guardar Pedido
-            const { error: orderError } = await supabase.from('orders').insert({
+            const { error: insertError } = await supabase.from('orders').insert({
               user_id: session.user.id,
               customer_name: nombre,
-              customer_phone: user.phone || '',
+              customer_phone: user.phone || telefono,
               total_price: total,
               items: items.map(i => ({
-                id: i.id,
+                id: i.id || '',
                 name: i.name,
                 quantity: i.quantity,
                 price: i.price,
-                category: i.category,
+                category: i.category || 'General',
               })),
               status: 'pendiente',
             });
 
-            if (orderError) throw orderError;
+            if (insertError) throw insertError;
 
-            // 2. Incrementar Puntos
-            const puntosGanados = Math.floor(total / 1000);
-            if (puntosGanados > 0) {
-              await supabase.rpc('increment_points', { 
-                row_id: session.user.id, 
-                amount: puntosGanados 
-              });
+            // Incrementar puntos si todo salió bien
+            const puntos = Math.floor(total / 1000);
+            if (puntos > 0) {
+              await supabase.rpc('increment_points', { row_id: session.user.id, amount: puntos });
             }
           };
 
-          // Timeout de 4 segundos para asegurar que se guarde sin trabar la experiencia
           await Promise.race([
-            dbFlow(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000))
+            dbWork(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 6000))
           ]);
           
-          console.log('[DEBUG] Pedido guardado ok');
-        } catch (dbError) {
-          console.error('[DB FAIL - Continuando a WhatsApp]', dbError);
+          console.log('[CHECKOUT] Pedido guardado en DB');
+        } catch (err) {
+          console.error('[CHECKOUT ERROR - Ignorado]', err);
         }
       }
 
-      // ── Paso C: Limpieza y Redirección ────────────────────────
+      // ── Paso C: Fin del flujo ──────────────────────────────────
       clearCart();
       window.location.href = whatsappUrl;
 
     } catch (error) {
-      console.error('[CRITICAL ERROR]', error);
+      console.error('[CRITICAL FLOW ERROR]', error);
       window.location.href = `https://wa.me/${FAVORIT_WHATSAPP}`;
     } finally {
-      // Pequeño timeout para que el estado no cambie tan brusco durante el redirect
-      setTimeout(() => setLoading(false), 800);
+      // Liberar estado con delay para evitar glitch visual en el redirect
+      setTimeout(() => setLoading(false), 1000);
     }
   };
 
