@@ -56,42 +56,39 @@ _Pedido generado desde Favorit AI_`;
 
       const whatsappUrl = `https://wa.me/${FAVORIT_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
 
-      // ── Paso B: Fire and Forget (SIN await) ───────────────────
-      // Prioridad: El usuario DEBE llegar a WhatsApp. El guardado es secundario.
+      // ── Paso B: Guardado en DB (CON await seguro) ───────────────────
+      // Usamos await para evitar que iOS/Android cancelen la petición
+      // al cambiar de app, pero lo envolvemos en un try/catch para NUNCA trabar el flujo.
       if (user?.id) {
-        supabase.auth.getSession().then(
-          ({ data: { session } }) => {
-            if (session) {
-              void supabase.from('orders').insert({
-                user_id: session.user.id,
-                customer_name: user.first_name || 'Cliente',
-                customer_phone: user.phone || '',
-                total_price: total,
-                items: items.map(i => ({
-                  id: i.id,
-                  name: i.name,
-                  quantity: i.quantity,
-                  price: i.price,
-                  category: i.category,
-                })),
-                status: 'pendiente',
-              }).then(
-                ({ error }) => {
-                  if (error) console.error('[DB Save Error]', error);
-                  else console.log('[DB Sync Success]');
-                },
-                (e) => console.error('[DB Crash]', e),
-              );
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const { error: insertError } = await supabase.from('orders').insert({
+              user_id: session.user.id,
+              customer_name: user.first_name || 'Cliente',
+              customer_phone: user.phone || '',
+              total_price: total,
+              items: items.map(i => ({
+                id: i.id,
+                name: i.name,
+                quantity: i.quantity,
+                price: i.price,
+                category: i.category,
+              })),
+              status: 'pendiente',
+            });
 
-              // Puntos (opcional, sin await)
-              const puntosGanados = Math.floor(total / 1000);
-              if (puntosGanados > 0) {
-                void supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados });
-              }
+            if (insertError) console.error('[DB Save Error]', insertError);
+
+            // Puntos (await seguro)
+            const puntosGanados = Math.floor(total / 1000);
+            if (puntosGanados > 0) {
+              await supabase.rpc('increment_points', { row_id: session.user.id, amount: puntosGanados });
             }
-          },
-          (e) => console.error('[Session Error]', e),
-        );
+          }
+        } catch (dbError) {
+          console.error('[DB Crash - Ignorado]', dbError);
+        }
       }
 
       // ── Paso C: Limpieza INMEDIATA ────────────────────────────
