@@ -394,7 +394,7 @@ function ProductForm({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <input
         ref={inputRef}
         type="file"
@@ -406,28 +406,33 @@ function ProductForm({
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Slide-up panel */}
-      <div className="relative mt-auto max-h-[92vh] bg-white rounded-t-3xl border-t border-gray-200 flex flex-col overflow-hidden shadow-2xl">
-        {/* Handle bar */}
-        <div className="flex-shrink-0 flex items-center justify-between px-5 pt-4 pb-3 border-b border-gray-100">
+      {/* Modal panel */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden border border-gray-100"
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-50">
           <div>
-            <p className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
+            <p className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-black">
               {editProduct ? 'Editando producto' : 'Nuevo producto'}
             </p>
-            <h2 className="text-lg font-heading font-bold text-gray-900 leading-tight mt-0.5">
+            <h2 className="text-xl font-heading font-black text-gray-900 leading-tight mt-1">
               {editProduct ? editProduct.name : 'Agregar al catálogo'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-200 transition-colors"
+            className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-all active:scale-90"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Scrollable form body */}
-        <div className="overflow-y-auto flex-1 px-5 pt-5 pb-32 flex flex-col gap-6">
+        <div className="overflow-y-auto flex-1 px-6 py-6 flex flex-col gap-6 scrollbar-hide">
+
 
           {/* Image uploader UI (integrated) */}
           <div className="flex flex-col gap-2">
@@ -744,9 +749,9 @@ function BulkImportModal({
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white w-full max-w-xl rounded-[32px] p-8 shadow-2xl relative border border-gray-100"
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900">Carga Masiva (CSV)</h3>
