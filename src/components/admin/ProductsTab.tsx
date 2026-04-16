@@ -633,7 +633,7 @@ function ProductForm({
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
