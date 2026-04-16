@@ -17,10 +17,7 @@ export async function updateOrderStatus(
   // 1. Update the order status
   const { error: updateError } = await supabase
     .from('orders')
-    .update({ 
-      status: newStatus,
-      updated_at: new Date().toISOString()
-    })
+    .update({ status: newStatus })
     .eq('id', orderId);
 
   if (updateError) {
