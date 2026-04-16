@@ -6,6 +6,7 @@ import {
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
   Package, Phone, MessageSquare, ChevronDown, Loader2,
   CircleDollarSign, Calendar, BarChart2, Award, Wallet, Ticket, Zap, Timer,
+  ArrowUpDown, ChevronUp
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -187,6 +188,8 @@ export default function AdminDashboardClient({
   const [mTimeFilter, setMTimeFilter] = useState<TimeFilter>('todos');
   const [mStartDate, setMStartDate] = useState('');
   const [mEndDate, setMEndDate] = useState('');
+  const [sortConfigProduct, setSortConfigProduct] = useState<{ key: 'monto' | 'cantidad'; direction: 'asc' | 'desc' }>({ key: 'monto', direction: 'desc' });
+  const [sortConfigClient, setSortConfigClient] = useState<{ key: 'total' | 'pedidos'; direction: 'asc' | 'desc' }>({ key: 'total', direction: 'desc' });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -321,8 +324,12 @@ export default function AdminDashboardClient({
         map[item.name].monto   += item.price * item.quantity;
       }
     }
-    return Object.values(map).sort((a, b) => b.monto - a.monto);
-  }, [metricOrders]);
+    return Object.values(map).sort((a, b) => {
+      const fieldA = a[sortConfigProduct.key];
+      const fieldB = b[sortConfigProduct.key];
+      return sortConfigProduct.direction === 'desc' ? fieldB - fieldA : fieldA - fieldB;
+    });
+  }, [metricOrders, sortConfigProduct]);
 
   type ClientRank = { name: string; total: number; pedidos: number };
   const clientRanking = useMemo((): ClientRank[] => {
@@ -333,8 +340,12 @@ export default function AdminDashboardClient({
       map[key].total   += o.total_price ?? 0;
       map[key].pedidos += 1;
     }
-    return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [metricOrders]);
+    return Object.values(map).sort((a, b) => {
+      const fieldA = a[sortConfigClient.key];
+      const fieldB = b[sortConfigClient.key];
+      return sortConfigClient.direction === 'desc' ? fieldB - fieldA : fieldA - fieldB;
+    });
+  }, [metricOrders, sortConfigClient]);
 
   const operacionesData = useMemo(() => {
     const entregados = metricOrders.filter(o => o.status === 'entregado' || o.status === 'delivered');
@@ -532,9 +543,25 @@ export default function AdminDashboardClient({
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                       {/* Header */}
                       <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Producto</span>
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-20 text-right">Monto $</span>
-                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest w-12 text-right">Cant.</span>
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest self-center">Producto</span>
+                        <button 
+                          onClick={() => setSortConfigProduct(prev => ({ key: 'monto', direction: prev.key === 'monto' && prev.direction === 'desc' ? 'asc' : 'desc' }))}
+                          className="flex items-center justify-end gap-1 group cursor-pointer"
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-widest w-20 text-right transition-colors ${sortConfigProduct.key === 'monto' ? 'text-[#6B2139]' : 'text-gray-400 group-hover:text-gray-600'}`}>Monto $</span>
+                          {sortConfigProduct.key === 'monto' ? (
+                            sortConfigProduct.direction === 'desc' ? <ChevronDown className="w-3 h-3 text-[#6B2139]" /> : <ChevronUp className="w-3 h-3 text-[#6B2139]" />
+                          ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-300 group-hover:text-gray-400" />}
+                        </button>
+                        <button 
+                          onClick={() => setSortConfigProduct(prev => ({ key: 'cantidad', direction: prev.key === 'cantidad' && prev.direction === 'desc' ? 'asc' : 'desc' }))}
+                          className="flex items-center justify-end gap-1 group cursor-pointer"
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-widest w-12 text-right transition-colors ${sortConfigProduct.key === 'cantidad' ? 'text-[#6B2139]' : 'text-gray-400 group-hover:text-gray-600'}`}>Cant.</span>
+                          {sortConfigProduct.key === 'cantidad' ? (
+                            sortConfigProduct.direction === 'desc' ? <ChevronDown className="w-3 h-3 text-[#6B2139]" /> : <ChevronUp className="w-3 h-3 text-[#6B2139]" />
+                          ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-300 group-hover:text-gray-400" />}
+                        </button>
                       </div>
                       {productRanking.map((p, i) => (
                         <div key={p.name} className={`grid grid-cols-[1fr_auto_auto] gap-2 items-center px-4 py-3 ${i < productRanking.length - 1 ? 'border-b border-gray-50' : ''}`}>
@@ -559,26 +586,50 @@ export default function AdminDashboardClient({
                   {clientRanking.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-10 italic">Sin datos para este período.</p>
                   ) : (
-                    clientRanking.map((c, i) => {
-                      const initials = c.name.split(' ').map(n => n[0] ?? '').join('').slice(0, 2).toUpperCase() || '??';
-                      const medal = i === 0 ? '#E8B63E' : i === 1 ? '#9CA3AF' : i === 2 ? '#92400E' : null;
-                      return (
-                        <div key={c.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3.5 flex items-center gap-3">
-                          <span className="text-xs font-black w-5 text-center flex-shrink-0" style={{ color: medal ?? '#D1D5DB' }}>#{i + 1}</span>
-                          <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center font-heading font-black text-white text-[13px] flex-shrink-0 shadow-md"
-                            style={{ background: `#6B2139` }}
-                          >
-                            {initials}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      {/* Header */}
+                      <div className="grid grid-cols-[1fr_auto_auto] gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest self-center">Cliente</span>
+                        <button 
+                          onClick={() => setSortConfigClient(prev => ({ key: 'total', direction: prev.key === 'total' && prev.direction === 'desc' ? 'asc' : 'desc' }))}
+                          className="flex items-center justify-end gap-1 group cursor-pointer"
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-widest w-20 text-right transition-colors ${sortConfigClient.key === 'total' ? 'text-[#6B2139]' : 'text-gray-400 group-hover:text-gray-600'}`}>Monto $</span>
+                          {sortConfigClient.key === 'total' ? (
+                            sortConfigClient.direction === 'desc' ? <ChevronDown className="w-3 h-3 text-[#6B2139]" /> : <ChevronUp className="w-3 h-3 text-[#6B2139]" />
+                          ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-300 group-hover:text-gray-400" />}
+                        </button>
+                        <button 
+                          onClick={() => setSortConfigClient(prev => ({ key: 'pedidos', direction: prev.key === 'pedidos' && prev.direction === 'desc' ? 'asc' : 'desc' }))}
+                          className="flex items-center justify-end gap-1 group cursor-pointer"
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-widest w-14 text-right transition-colors ${sortConfigClient.key === 'pedidos' ? 'text-[#6B2139]' : 'text-gray-400 group-hover:text-gray-600'}`}>Pedidos</span>
+                          {sortConfigClient.key === 'pedidos' ? (
+                            sortConfigClient.direction === 'desc' ? <ChevronDown className="w-3 h-3 text-[#6B2139]" /> : <ChevronUp className="w-3 h-3 text-[#6B2139]" />
+                          ) : <ArrowUpDown className="w-2.5 h-2.5 text-gray-300 group-hover:text-gray-400" />}
+                        </button>
+                      </div>
+                      {clientRanking.map((c, i) => {
+                        const initials = c.name.split(' ').map(n => n[0] ?? '').join('').slice(0, 2).toUpperCase() || '??';
+                        const medal = i === 0 ? '#E8B63E' : i === 1 ? '#9CA3AF' : i === 2 ? '#92400E' : null;
+                        return (
+                          <div key={c.name} className={`grid grid-cols-[1fr_auto_auto] gap-2 items-center px-4 py-3.5 ${i < clientRanking.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-[11px] font-black w-5 text-center flex-shrink-0" style={{ color: medal ?? '#D1D5DB' }}>#{i + 1}</span>
+                              <div
+                                className="w-8 h-8 rounded-full flex items-center justify-center font-heading font-black text-white text-[11px] flex-shrink-0 shadow-sm"
+                                style={{ background: `#6B2139` }}
+                              >
+                                {initials}
+                              </div>
+                              <span className="font-semibold text-gray-900 text-sm truncate">{c.name}</span>
+                            </div>
+                            <span className="text-base font-black text-[#3C5040] font-heading w-20 text-right">{formatCurrency(c.total)}</span>
+                            <span className="text-sm font-bold text-gray-500 w-14 text-right">{c.pedidos}</span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
-                            <p className="text-[11px] text-gray-400">{c.pedidos} pedido{c.pedidos !== 1 ? 's' : ''}</p>
-                          </div>
-                          <span className="text-base font-black text-[#3C5040] font-heading flex-shrink-0">{formatCurrency(c.total)}</span>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
