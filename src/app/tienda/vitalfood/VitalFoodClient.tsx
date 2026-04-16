@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Plus, Minus } from 'lucide-react';
 import { useCart } from '@/store/useCart';
 import { FAVORIT_WHATSAPP } from '@/config/contacto';
+import { AnimatePresence } from 'framer-motion';
+import { ProductDetailModal } from '@/components/home/ProductDetailModal';
 
 type Tab = 'menu-dia' | 'menu-fijo' | 'promos';
 
@@ -41,7 +43,18 @@ interface Props {
 
 export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, todayStr }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('menu-dia');
+  const [selectedMenu, setSelectedMenu] = useState<any>(null);
   const { items, addItem, updateQuantity } = useCart();
+
+  const formatForModal = (item: any, category: string, uniqueId?: string) => ({
+    id: uniqueId || item.id,
+    name: item.name,
+    description: item.description,
+    price: item.price,
+    category: category,
+    image_url: item.image_url,
+    image_urls: item.image_url ? [item.image_url] : []
+  });
 
   const getItemQty = (id: string) => items.find(i => i.id === id)?.quantity || 0;
 
@@ -101,13 +114,19 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
                   const isProt = item.id.includes('prot');
                   return (
                     <div key={item.id} className={`bg-white rounded-2xl shadow-sm border-l-4 border-orange-500 border-y border-r border-gray-100 flex flex-col overflow-hidden`}>
-                      <div className={`h-32 w-full ${item.image_url ? 'bg-transparent' : 'bg-orange-50'} flex items-center justify-center overflow-hidden border-b border-gray-50`}>
-                        {item.image_url ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" /> : <img src="/logovitalfood.png" className="h-10 opacity-20 grayscale" alt="" />}
+                      <div 
+                        className={`h-32 w-full ${item.image_url ? 'bg-transparent cursor-pointer' : 'bg-orange-50 cursor-pointer'} flex items-center justify-center overflow-hidden border-b border-gray-50`}
+                        onClick={() => setSelectedMenu(formatForModal(item, 'Menú del Día'))}
+                      >
+                        {item.image_url ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform hover:scale-105" /> : <img src="/logovitalfood.png" className="h-10 opacity-20 grayscale" alt="" />}
                       </div>
                       <div className="p-4 flex flex-col gap-2 flex-grow">
-                        <div>
+                        <div className="cursor-pointer" onClick={() => setSelectedMenu(formatForModal(item, 'Menú del Día'))}>
                           <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
                           <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                          <span className="text-[10px] text-yellow-500 font-bold uppercase mt-1.5 inline-flex items-center gap-1 active:scale-95 transition-transform">
+                            ⓘ VER DETALLE
+                          </span>
                         </div>
                         <div className="flex items-center justify-between mt-auto pt-3">
                           <span className="text-lg font-black text-[#3C5040]">${item.price}</span>
@@ -181,13 +200,21 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
                     return (
                       <div key={item.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex gap-4">
                         {item.image_url && (
-                          <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-50">
-                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                          <div 
+                            className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-50 cursor-pointer"
+                            onClick={() => setSelectedMenu(formatForModal(item, cat.category, itemId))}
+                          >
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover transition-transform hover:scale-105" />
                           </div>
                         )}
                         <div className="flex-1 flex flex-col min-w-0">
-                          <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                          <div className="cursor-pointer" onClick={() => setSelectedMenu(formatForModal(item, cat.category, itemId))}>
+                            <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{item.description}</p>
+                            <span className="text-[10px] text-yellow-500 font-bold uppercase mt-1.5 inline-flex items-center gap-1 active:scale-95 transition-transform">
+                              ⓘ VER DETALLE
+                            </span>
+                          </div>
                           
                           <div className="flex items-center justify-between mt-auto pt-2">
                              <span className="text-lg font-black text-[#E27E36]">${item.price}</span>
@@ -250,6 +277,15 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
           )}
         </div>
       )}
+
+      <AnimatePresence>
+        {selectedMenu && (
+          <ProductDetailModal 
+            product={selectedMenu}
+            onClose={() => setSelectedMenu(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

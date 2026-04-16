@@ -210,6 +210,23 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
     setDate(new Date().toISOString().split('T')[0]);
   };
 
+  const handleDeleteMenu = async (id: string) => {
+    if (!confirm('¿Seguro que querés eliminar este menú del historial?')) return;
+    
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from('vitalfood_daily_menus').delete().eq('id', id);
+      if (error) throw error;
+      
+      setMenus(prev => prev.filter(m => m.id !== id));
+      setSuccessMsg('Menú eliminado correctamente');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e: any) {
+      console.error('Error eliminando menú:', e);
+      setError('Error al eliminar: ' + (e.message || 'revisá tu conexión.'));
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6">
       {/* Form Card */}
@@ -370,12 +387,21 @@ function MenuDiaView({ initialMenus }: { initialMenus: DailyMenu[] }) {
                   {menu.status === 'published' ? 'Publicado' : 'Programado'}
                 </span>
               </div>
-              <button 
-                onClick={() => handleDuplicate(menu)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
-              >
-                <Copy className="w-3.5 h-3.5" /> Duplicar
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => handleDuplicate(menu)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors shadow-sm"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Duplicar
+                </button>
+                <button 
+                  onClick={() => handleDeleteMenu(menu.id)}
+                  title="Eliminar menú del historial"
+                  className="flex items-center justify-center w-8 h-8 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-colors shadow-sm active:scale-95"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
           {menus.length === 0 && <p className="text-center text-sm text-gray-400 py-4 italic">No hay registros previos</p>}
