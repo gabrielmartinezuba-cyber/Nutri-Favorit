@@ -29,7 +29,7 @@ export default function CartPage() {
 
   if (!isHydrated) return null; // Wait for hydration on cart page to avoid flicker
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) return;
     setLoading(true);
 
