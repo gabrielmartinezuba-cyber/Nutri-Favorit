@@ -38,20 +38,21 @@ export default function LoginPage() {
     checkSession();
   }, [supabase, router, setUser]);
 
-  const handleGoogleLogin = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleGoogleLogin = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
+          redirectTo: `${window.location.origin}/`,
+        }
       });
+      
       if (error) throw error;
     } catch (error) {
       console.error('Error login:', error);
       setLoading(false);
+      alert('Hubo un error al conectar con Google. Por favor, intenta de nuevo.');
     }
   };
 
@@ -95,7 +96,7 @@ export default function LoginPage() {
             <button
               id="google-login-btn"
               type="button"
-              onClick={(e) => handleGoogleLogin(e)}
+              onClick={handleGoogleLogin}
               disabled={loading}
               className="w-full bg-white border-2 border-gray-100 py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:border-brand-mostaza/30 hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
             >
