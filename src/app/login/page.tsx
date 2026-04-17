@@ -77,7 +77,7 @@ export default function LoginPage() {
           {/* Logo Area */}
           <div className="text-center mb-12 flex flex-col items-center">
             <h1 className="text-3xl font-heading font-black text-gray-900 leading-tight">
-              Bienvenido a <span className="text-brand-borravino">Favorit</span>
+              Bienvenido a <span className="text-brand-borravino">Favorit</span> y <span className="text-[#3C5040]">Vitalfood</span>
             </h1>
             <p className="text-gray-500 mt-3 font-medium">
               Tu comida saludable, inteligente y personalizada.

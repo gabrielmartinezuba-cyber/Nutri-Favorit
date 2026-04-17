@@ -4,6 +4,8 @@ import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Zap, Wheat, Flame, Minus, Plus } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/navigation';
 
 export function ProductDetailModal({ product, initialIndex = 0, onClose }: { product: any, initialIndex?: number, onClose: () => void }) {
   const [index, setIndex] = React.useState(initialIndex);
@@ -134,12 +136,22 @@ export function ProductDetailModal({ product, initialIndex = 0, onClose }: { pro
 
 function QuantityControl({ product }: { product: any }) {
   const { items, addItem, updateQuantity } = useCartStore();
+  const user = useAuthStore((state) => state.user);
+  const router = useRouter();
   const cartItem = items.find((i) => i.id === product.id);
+
+  const handleAuthAction = (action: () => void) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    action();
+  };
 
   if (!cartItem) {
     return (
       <button 
-        onClick={() => addItem(product)}
+        onClick={() => handleAuthAction(() => addItem(product))}
         className="w-full bg-brand-mostaza text-white text-[15px] font-bold py-3.5 rounded-2xl shadow-lg hover:shadow-xl hover:bg-[#d4a030] active:scale-95 transition-all flex items-center justify-center gap-2"
       >
         <Plus className="w-5 h-5" /> Agregar al carrito
@@ -159,7 +171,7 @@ function QuantityControl({ product }: { product: any }) {
         {cartItem.quantity} unidades
       </span>
       <button 
-        onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
+        onClick={() => handleAuthAction(() => updateQuantity(product.id, cartItem.quantity + 1))}
         className="w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-sm text-brand-borravino hover:bg-gray-100 transition-colors"
       >
         <Plus className="w-5 h-5" />

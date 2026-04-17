@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Plus, Minus } from 'lucide-react';
 import { useCart } from '@/store/useCart';
+import { useAuthStore } from '@/store/authStore';
+import { useRouter } from 'next/navigation';
 import { FAVORIT_WHATSAPP } from '@/config/contacto';
 import { AnimatePresence } from 'framer-motion';
 import { ProductDetailModal } from '@/components/home/ProductDetailModal';
@@ -45,6 +47,8 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
   const [activeTab, setActiveTab] = useState<Tab>('menu-dia');
   const [selectedMenu, setSelectedMenu] = useState<any>(null);
   const { items, addItem, updateQuantity } = useCart();
+  const user = useAuthStore(state => state.user);
+  const router = useRouter();
 
   const formatForModal = (item: any, category: string, uniqueId?: string) => ({
     id: uniqueId || item.id,
@@ -59,6 +63,10 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
   const getItemQty = (id: string) => items.find(i => i.id === id)?.quantity || 0;
 
   const handleAddToCart = (item: any) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     addItem({
       id: item.id,
       name: item.name,
@@ -68,7 +76,13 @@ export default function VitalFoodClient({ menuDia, postres, menuFijo, promos, to
     });
   };
 
-  const handleUpdateQty = (id: string, newQty: number) => updateQuantity(id, newQty);
+  const handleUpdateQty = (id: string, newQty: number) => {
+    if (newQty > getItemQty(id) && !user) {
+      router.push('/login');
+      return;
+    }
+    updateQuantity(id, newQty);
+  };
 
   return (
     <div className="pb-32 pt-4 flex flex-col gap-6 bg-[#f8f9f4] min-h-[100dvh] -mt-16 pt-20 -mx-4 px-4">
