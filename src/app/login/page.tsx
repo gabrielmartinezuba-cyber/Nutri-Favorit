@@ -38,7 +38,8 @@ export default function LoginPage() {
     checkSession();
   }, [supabase, router, setUser]);
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (e: React.MouseEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -93,7 +94,8 @@ export default function LoginPage() {
 
             <button
               id="google-login-btn"
-              onClick={handleGoogleLogin}
+              type="button"
+              onClick={(e) => handleGoogleLogin(e)}
               disabled={loading}
               className="w-full bg-white border-2 border-gray-100 py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:border-brand-mostaza/30 hover:bg-gray-50 active:scale-95 transition-all shadow-sm"
             >
