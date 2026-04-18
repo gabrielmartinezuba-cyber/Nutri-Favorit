@@ -33,7 +33,7 @@ export default function CartPage() {
   if (!isHydrated) return null; // Wait for hydration on cart page to avoid flicker
 
   const handleCheckout = async () => {
-    if (items.length === 0) return;
+    if (items.length === 0 || loading) return;
     setLoading(true);
 
     try {
@@ -61,16 +61,8 @@ _Pedido generado desde Favorit AI_`;
 
       // ── Paso B: Guardado en DB ──────────────────────────────────
       if (user?.id) {
-        const sessionObj = await supabase.auth.getSession();
-        const session = sessionObj.data?.session;
-        
-        if (!session) {
-          console.warn('[CHECKOUT] Sin sesión activa de Supabase');
-          return;
-        }
-
         const { error: insertError } = await supabase.from('orders').insert({
-          user_id: session.user.id,
+          user_id: user.id,
           customer_name: nombre,
           customer_phone: user.phone || telefono,
           total_price: total,
@@ -84,12 +76,22 @@ _Pedido generado desde Favorit AI_`;
           status: 'pendiente',
         });
 
-        if (insertError) throw insertError;
-
-        // Incrementar puntos si todo salió bien
-        const puntos = Math.floor(total / 1000);
-        if (puntos > 0) {
-          await supabase.rpc('increment_points', { row_id: session.user.id, amount: puntos });
+        if (insertError) {
+          console.error('[CHECKOUT DB ERROR]', insertError);
+          // Opcional: podrías decidir si seguir o no. Por ahora seguimos para no trabar al usuario
+        } else {
+          // Incrementar puntos (opcional, si falla no bloqueamos)
+          try {
+            const puntos = Math.floor(total / 1000);
+            if (puntos > 0) {
+              await supabase.rpc('increment_points', { 
+                row_id: user.id, 
+                amount: puntos 
+              });
+            }
+          } catch (ptsErr) {
+            console.warn('[CHECKOUT POINTS ERROR]', ptsErr);
+          }
         }
       }
 
