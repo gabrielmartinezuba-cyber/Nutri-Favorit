@@ -48,6 +48,11 @@ export default function PhoneBarrier() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       try {
+        if (event === 'SIGNED_OUT') {
+          if (mounted) setUser(null);
+          return;
+        }
+
         if (session?.user) {
           const { data: profile } = await supabase
             .from('profiles')

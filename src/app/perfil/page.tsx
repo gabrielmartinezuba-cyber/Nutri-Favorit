@@ -50,10 +50,14 @@ export default function ProfileHubPage() {
   }, [user, router]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.push('/');
-    router.refresh();
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      router.push('/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Error logout:', error);
+    }
   };
 
   if (!user) {
