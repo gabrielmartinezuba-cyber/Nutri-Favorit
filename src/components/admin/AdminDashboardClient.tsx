@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
 import {
   Users, ShoppingBag, Star, Search, TrendingUp,
   LogOut, Clock, CheckCircle, XCircle, ChevronRight,
@@ -193,6 +193,32 @@ export default function AdminDashboardClient({
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  // Suscripción Realtime para Admin
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('Realtime order update (admin):', payload);
+          if (payload.eventType === 'INSERT') {
+            setOrders(prev => [payload.new as Order, ...prev]);
+            showToast('¡Nuevo pedido recibido!', 'success');
+          } else if (payload.eventType === 'UPDATE') {
+            setOrders(prev => prev.map(o => o.id === payload.new.id ? (payload.new as Order) : o));
+          } else if (payload.eventType === 'DELETE') {
+            setOrders(prev => prev.filter(o => o.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
