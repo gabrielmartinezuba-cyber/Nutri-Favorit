@@ -5,9 +5,10 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { Clock, Package, ChevronRight } from 'lucide-react';
 
+const supabase = createClient();
+
 export default function ActiveOrderTracker({ initialOrders, userId }: { initialOrders: any[], userId: string }) {
   const [orders, setOrders] = useState(initialOrders);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!userId) return;

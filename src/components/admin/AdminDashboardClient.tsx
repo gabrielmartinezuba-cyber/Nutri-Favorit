@@ -192,7 +192,7 @@ export default function AdminDashboardClient({
   const [sortConfigClient, setSortConfigClient] = useState<{ key: 'total' | 'pedidos'; direction: 'asc' | 'desc' }>({ key: 'total', direction: 'desc' });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Suscripción Realtime para Admin
   useEffect(() => {
