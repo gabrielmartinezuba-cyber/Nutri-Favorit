@@ -51,12 +51,18 @@ export default function ProfileHubPage() {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Limpiar estado local primero para feedback instantáneo
       setUser(null);
-      router.push('/login');
-      router.refresh();
+      
+      // Intentar signout de supabase
+      await supabase.auth.signOut();
+      
+      // Forzar recarga total para limpiar TODA la caché de Next.js y Supabase
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error logout:', error);
+      // Fallback de emergencia
+      window.location.href = '/login';
     }
   };
 
