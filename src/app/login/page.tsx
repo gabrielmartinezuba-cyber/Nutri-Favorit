@@ -25,8 +25,15 @@ export default function LoginPage() {
 
   // Si ya tiene sesión, mandarlo a la tienda
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     const checkSession = async () => {
       try {
+        // Seguridad: si en 1.5s no respondió Supabase, destrabar la UI
+        timeoutId = setTimeout(() => {
+          setChecking(false);
+        }, 1500);
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           const { data: profile } = await supabase
@@ -38,8 +45,8 @@ export default function LoginPage() {
           if (profile) {
             setUser(profile);
             router.push('/tienda/favorit');
-            // IMPORTANTE: Incluso si redirigimos, apagamos el check por si el redirect tarda
             setChecking(false);
+            clearTimeout(timeoutId);
             return;
           }
         }
@@ -47,9 +54,13 @@ export default function LoginPage() {
         console.error('Check session error:', err);
       } finally {
         setChecking(false);
+        if (timeoutId) clearTimeout(timeoutId);
       }
     };
     checkSession();
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [supabase, router, setUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
