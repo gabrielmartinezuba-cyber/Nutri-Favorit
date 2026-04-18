@@ -8,28 +8,39 @@ export default function PhoneBarrier() {
   const { setUser, setLoading: setGlobalLoading } = useAuthStore();
   const supabase = createClient();
 
-  // Escuchar cambios de auth para sincronizar perfil
   useEffect(() => {
+    let mounted = true;
+
     const checkUser = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
+        if (sessionError) throw sessionError;
+
         if (session?.user) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
-          setUser(profile || null);
+          if (mounted) {
+            setUser(profile || null);
+          }
         } else {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Error checking user session:', error);
-        setUser(null);
+        if (mounted) {
+          setUser(null);
+        }
       } finally {
-        setGlobalLoading(false);
+        if (mounted) {
+          setGlobalLoading(false);
+        }
       }
     };
 
@@ -43,19 +54,30 @@ export default function PhoneBarrier() {
             .select('*')
             .eq('id', session.user.id)
             .single();
-          setUser(profile || null);
+          if (mounted) {
+            setUser(profile || null);
+          }
         } else {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+          }
         }
       } catch (error) {
         console.error('Error in auth state change:', error);
-        setUser(null);
+        if (mounted) {
+          setUser(null);
+        }
       } finally {
-        setGlobalLoading(false);
+        if (mounted) {
+          setGlobalLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [supabase, setUser, setGlobalLoading]);
 
   return null;

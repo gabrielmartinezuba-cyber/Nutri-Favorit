@@ -26,21 +26,26 @@ export default function LoginPage() {
   // Si ya tiene sesión, mandarlo a la tienda
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Traer perfil para actualizar store
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          setUser(profile);
-          router.push('/tienda/favorit');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            setUser(profile);
+            router.push('/tienda/favorit');
+            // IMPORTANTE: Incluso si redirigimos, apagamos el check por si el redirect tarda
+            setChecking(false);
+            return;
+          }
         }
-        setChecking(false);
-      } else {
+      } catch (err) {
+        console.error('Check session error:', err);
+      } finally {
         setChecking(false);
       }
     };
@@ -71,9 +76,10 @@ export default function LoginPage() {
           password
         });
         if (signInError) throw signInError;
-        if (data.session) {
-            router.push('/');
-        }
+        
+        // Redirección explícita inmediata si no hay error
+        router.push('/');
+        return;
       } else {
         // REGISTRO
         if (!fullName || !phone) {
@@ -100,6 +106,7 @@ export default function LoginPage() {
         
         if (data.session) {
             router.push('/');
+            return;
         } else {
             setError('Registro exitoso. Si es necesario, revisa tu correo o intenta iniciar sesión.');
             setIsLogin(true);
