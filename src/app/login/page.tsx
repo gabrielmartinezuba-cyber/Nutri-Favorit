@@ -65,8 +65,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     
+    // Validaciones básicas antes de disparar el loading
     if (!email || !password) {
       setError('Por favor completa todos los campos obligatorios.');
       return;
@@ -78,25 +78,25 @@ export default function LoginPage() {
     }
 
     setLoading(true);
+    setError('');
 
     try {
       if (isLogin) {
         // LOGIN
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password
         });
+        
         if (signInError) throw signInError;
         
-        // Redirección explícita inmediata si no hay error
+        // ÉXITO: Redirección inmediata y refresh para limpiar caché
         router.push('/');
-        return;
+        router.refresh();
       } else {
         // REGISTRO
         if (!fullName || !phone) {
-          setError('El nombre y teléfono son obligatorios para el registro.');
-          setLoading(false);
-          return;
+          throw new Error('El nombre y teléfono son obligatorios para el registro.');
         }
 
         const { data, error: signUpError } = await supabase.auth.signUp({
@@ -117,7 +117,7 @@ export default function LoginPage() {
         
         if (data.session) {
             router.push('/');
-            return;
+            router.refresh();
         } else {
             setError('Registro exitoso. Si es necesario, revisa tu correo o intenta iniciar sesión.');
             setIsLogin(true);
@@ -133,6 +133,7 @@ export default function LoginPage() {
           setError(err.message || 'Hubo un error al procesar tu solicitud.');
       }
     } finally {
+      // CRÍTICO: Siempre apagar el loading pase lo que pase
       setLoading(false);
     }
   };
